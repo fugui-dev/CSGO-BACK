@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.user.mapper.ApiAnnouncementMapper">
+
+    <select id="getAnnouncementList" parameterType="Long" resultType="com.ruoyi.domain.other.TtAnnouncement">
+        SELECT
+            ta.*,
+            CASE WHEN tar.user_id IS NOT NULL THEN 1 ELSE 0 END AS `read`
+        FROM tt_announcement ta
+        LEFT JOIN tt_announcement_read AS tar ON ta.announcement_id = tar.announcement_id AND tar.user_id = #{userId}
+        ORDER BY ta.create_time DESC
+    </select>
+
+    <select id="getAnnouncementByAnnouncementId" parameterType="Integer" resultType="com.ruoyi.domain.other.TtAnnouncement">
+        SELECT * FROM tt_announcement WHERE announcement_id = #{announcementId}
+    </select>
+
+    <select id="countUnreadAnnouncement" parameterType="Long" resultType="int">
+        SELECT
+            COUNT(ta.announcement_id)
+        FROM tt_announcement ta
+            LEFT JOIN tt_announcement_read AS tar ON ta.announcement_id = tar.announcement_id AND tar.user_id = #{userId}
+        WHERE
+            tar.user_id IS NULL
+    </select>
+</mapper>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtRedPacketMapper">
+
+    <select id="queryList" resultType="com.ruoyi.domain.vo.TtRedPacketDataVO" parameterType="com.ruoyi.domain.other.TtRedPacketBody">
+        SELECT
+            trp.id,
+            trp.title,
+            trp.description,
+            trp.num,
+            trp.amount,
+            CONCAT(trp.num - COUNT(trpr.red_packet_id), '/', trp.num) AS remainingNum,
+            trp.amount AS amountRange,
+            trp.user_id,
+            trp.`password`,
+            trp.opening_time,
+            trp.validity,
+            trp.`status`,
+            trp.create_by,
+            trp.create_time,
+            trp.update_by,
+            trp.update_time,
+            trp.use_status
+        FROM tt_red_packet trp
+        LEFT JOIN tt_red_packet_record trpr ON trp.id = trpr.red_packet_id
+        <where>
+            <if test="id != null"> AND trp.id = #{id} </if>
+            <if test="title != null"> AND trp.title = #{title} </if>
+            <if test="status != null"> AND trp.status = #{status} </if>
+            and del_flag = 0
+        </where>
+        GROUP BY
+            trp.id,
+            trp.title,
+            trp.description,
+            trp.num,
+            trp.amount,
+            trp.user_id,
+            trp.`password`,
+            trp.opening_time,
+            trp.validity,
+            trp.`status`,
+            trp.create_by,
+            trp.create_time,
+            trp.update_by,
+            trp.update_time,
+            trp.use_status
+        ORDER BY trp.create_time DESC
+    </select>
+</mapper>

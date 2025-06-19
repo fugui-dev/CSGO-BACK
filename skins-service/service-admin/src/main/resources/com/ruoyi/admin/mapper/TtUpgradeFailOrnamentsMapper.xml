@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtUpgradeFailOrnamentsMapper">
+
+    <select id="queryList" resultType="com.ruoyi.domain.vo.TtUpgradeFailOrnamentsDataVO">
+        SELECT
+            tufo.id,
+            tufo.upgrade_id,
+            tufo.ornament_id,
+            tufo.ornament_number,
+            tto.use_price,
+            tto.name as item_name,
+            tto.image_url,
+            tto.type,
+            tto.type_name,
+            tufo.ornament_level_id,
+            tol.`level`,
+            tufo.create_time,
+            tufo.update_time
+        FROM tt_upgrade_fail_ornaments tufo
+                 LEFT JOIN tt_ornament tto ON tufo.ornament_id = tto.id
+                 LEFT JOIN tt_ornaments_level tol ON tufo.ornament_level_id = tol.id
+        WHERE tufo.upgrade_id = #{upgradeOrnamentId}
+    </select>
+
+    <select id="getFailOrnamentsList" resultType="com.ruoyi.domain.other.TtUpgradeFailOrnaments">
+        <![CDATA[
+        SELECT
+            tufo.id,
+            tufo.upgrade_id,
+            tufo.ornament_id,
+            tufo.ornament_level_id,
+            tufo.create_time,
+            tufo.update_time
+        FROM tt_upgrade_fail_ornaments tufo
+                 LEFT JOIN tt_ornament tto ON tufo.ornament_id = tto.id
+        WHERE tufo.upgrade_id = #{id} AND tto.use_price <= #{price}
+        ]]>
+    </select>
+
+    <select id="ornamentInfoByUpgradeId" resultType="com.ruoyi.domain.vo.upgrade.SimpleOrnamentVO">
+        select
+            tufo.ornament_id,
+            tufo.ornament_name,
+            tufo.ornament_price,
+            tufo.ornament_number,
+            tto.image_url as ornament_img_url,
+            tto.market_hash_name as ornament_hash_name,
+            tol.level as ornament_level,
+            tol.level_img as ornament_level_img
+        from
+            tt_upgrade_fail_ornaments tufo
+        left join tt_ornament tto on tufo.ornament_id = tto.id
+        left join tt_ornaments_level tol on tol.id = tufo.ornament_level_id
+        where tufo.upgrade_id = #{upgradeOrnId}
+    </select>
+</mapper>

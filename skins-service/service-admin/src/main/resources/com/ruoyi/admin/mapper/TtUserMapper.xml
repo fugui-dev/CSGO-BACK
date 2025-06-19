@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtUserMapper">
+
+    <resultMap type="com.ruoyi.domain.entity.sys.TtUser" id="TtUserResult">
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="nickName" column="nick_name"/>
+        <result property="userType" column="user_type"/>
+        <result property="email" column="email"/>
+        <result property="phoneNumber" column="phone_number"/>
+        <result property="avatar" column="avatar"/>
+        <result property="password" column="password"/>
+        <result property="accountAmount" column="account_amount"/>
+        <result property="accountCredits" column="account_credits"/>
+        <result property="invitationCode" column="invitation_code"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="vipLevel" column="vip_level"/>
+        <result property="promotionLevel" column="promotion_level"/>
+        <result property="status" column="status"/>
+        <result property="deliveryStatus" column="delivery_status"/>
+        <result property="steamId" column="steam_id"/>
+        <result property="transactionLink" column="transaction_link"/>
+        <result property="realName" column="real_name"/>
+        <result property="idNum" column="id_num"/>
+        <result property="certifyId" column="certify_id"/>
+        <result property="isRealCheck" column="is_real_check"/>
+        <result property="commissionRate" column="commission_rate"/>
+        <result property="loginIp" column="login_ip"/>
+        <result property="nickName" column="nick_name"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="totalRecharge" column="total_recharge"/>
+        <result property="bdChannelId" column="bd_channel_id"/>
+        <result property="bdChannelUrl" column="bd_channel_url"/>
+    </resultMap>
+
+    <sql id="selectTtUserVo">
+        select user_id,
+               user_name,
+               nick_name,
+               user_type,
+               email,
+               phone_number,
+               avatar,
+               password,
+               account_amount,
+               account_credits,
+               invitation_code,
+               parent_id,
+               vip_level,
+               promotion_level,
+               status,
+               delivery_status,
+               steam_id,
+               transaction_link,
+               real_name,
+               id_num,
+               certify_id,
+               is_real_check,
+               commission_rate,
+               login_ip,
+               login_date,
+               create_by,
+               create_time,
+               update_by,
+               update_time,
+               remark,
+               del_flag,
+               total_recharge,
+               bd_channel_id,
+               bd_channel_url
+        from tt_user
+    </sql>
+
+    <select id="getPackSack" resultType="com.ruoyi.domain.vo.TtUserPackSackDataVO"
+            parameterType="com.ruoyi.domain.other.TtUserPackSackBody">
+        SELECT
+        tbr.id,
+        tbr.holder_user_id,
+        tu.nick_name,
+        tu.avatar,
+        tbr.ornament_id,
+        tto.name as ornamentName,
+        tbr.ornaments_price,
+        tto.image_url,
+        tbr.`status`,
+        tbr.source,
+        tbr.fight_id,
+        tbr.roll_id,
+        tbr.create_time,
+        tbr.update_time
+        FROM tt_user tu
+        LEFT JOIN tt_box_records tbr ON tu.user_id = tbr.holder_user_id
+        LEFT JOIN tt_ornament tto ON tto.id = tbr.ornament_id
+        <where>
+            <if test="holderUserId != null">AND tbr.holder_user_id = #{holderUserId}</if>
+            <if test="phoneNumber != null">AND tu.phone_number = #{phoneNumber}</if>
+            <if test="status != null">AND tbr.`status` = #{status}</if>
+            <if test="source != null">AND tbr.source = #{source}</if>
+            <if test="fightId != null">AND tbr.fight_id = #{fightId}</if>
+            <if test="rollId != null">AND tbr.roll_id = #{rollId}</if>
+        AND tbr.`status` != '10'
+        </where>
+        ORDER BY tbr.create_time DESC
+    </select>
+
+    <select id="getUserProfitStatistics" resultType="java.util.Map">
+        SELECT
+            s1.totalDelivery AS totalDelivery,
+            s1.totalRecharge AS totalRecharge,
+            ( s1.totalRecharge - s1.totalDelivery ) AS totalProfit
+        FROM
+            (
+                SELECT
+                    IFNULL(( SELECT sum( buy_price ) FROM tt_delivery_record WHERE user_id = #{userId} AND `status` = '10' ), 0 ) AS totalDelivery,
+                    IFNULL( sum( amount_actually_paid ), 0 ) AS totalRecharge
+                FROM
+                    tt_recharge_record
+                WHERE
+                    user_id = #{userId}
+                  AND `status` = 0
+            ) AS s1
+    </select>
+
+<!--    <select id="getUserProfitStatistics" resultType="java.util.Map">-->
+<!--        SELECT-->
+<!--            COALESCE(SUM(tdr.buy_price), 0) AS totalDelivery,-->
+<!--            COALESCE(SUM(trr.amount_actually_paid), 0) AS totalRecharge,-->
+<!--            COALESCE(SUM(trr.amount_actually_paid), 0) - COALESCE(SUM(tdr.buy_price), 0) AS totalProfit-->
+<!--        FROM tt_user tu-->
+<!--                 LEFT JOIN tt_delivery_record tdr ON tu.user_id = tdr.user_id AND tdr.`status` = '10'-->
+<!--                 LEFT JOIN tt_recharge_record trr ON tu.user_id = trr.user_id AND trr.`status` = '0'-->
+<!--        WHERE tu.user_id = #{userId}-->
+<!--    </select>-->
+
+    <select id="selectTtUserById" parameterType="java.lang.Long" resultMap="TtUserResult">
+        <include refid="selectTtUserVo"/>
+        where user_id = #{id}
+    </select>
+
+    <update id="updateTtUserCoin">
+        update tt_user
+        set bean = (bean + #{money})
+        where user_id = #{userId}
+    </update>
+
+    <update id="updateAccountAmount">
+        update tt_user
+        set account_amount = (account_amount + #{money})
+        where user_id = #{userId}
+    </update>
+
+    <!--废弃-->
+    <select id="propRankOfDay" resultType="com.ruoyi.domain.vo.TtUserPackSackDataVO">
+
+        select
+            t.*,
+            ROW_NUMBER() OVER(ORDER BY t.ornaments_price,t.holder_user_id DESC) price_rank
+        from (
+            SELECT
+            tbr.id,
+            tbr.holder_user_id,
+            tu.nick_name,
+            tu.avatar,
+            tbr.ornament_id,
+            tto.name,
+            tbr.ornaments_price,
+            tto.image_url,
+            tbr.`status`,
+            tbr.source,
+            tbr.fight_id,
+            tbr.roll_id,
+            tbr.create_time,
+            tbr.update_time
+            FROM tt_user tu
+            LEFT JOIN tt_box_records tbr ON tu.user_id = tbr.holder_user_id
+            LEFT JOIN tt_ornament tto ON tto.id = tbr.ornament_id
+            where
+            tbr.source in
+            <foreach item="source" collection="sources" open="(" separator="," close=")">
+                #{source}
+            </foreach>
+            and
+            tbr.create_time > #{createTime}
+            LIMIT
+            #{page},#{size}
+        ) t
+    </select>
+
+    <select id="propRankUsers" resultType="integer">
+        SELECT
+            any_value(tbr.holder_user_id) AS holder_user_id
+        FROM tt_user tu
+             LEFT JOIN tt_box_records tbr ON tu.user_id = tbr.holder_user_id
+             LEFT JOIN tt_ornament tto ON tto.id = tbr.ornament_id
+        where
+            tbr.source in
+            <foreach item="source" collection="sources" open="(" separator="," close=")">
+                #{source}
+            </foreach>
+        and
+            tbr.create_time > #{begin}
+        and
+            tbr.create_time &lt; #{end}
+        GROUP BY tbr.holder_user_id
+    </select>
+
+    <select id="maxPricePropByUserIds" resultType="com.ruoyi.domain.vo.TtUserPackSackDataVO">
+
+        SELECT
+            any_value(tbr.id) AS id,
+            any_value(tbr.holder_user_id) AS holder_user_id,
+            any_value(tu.nick_name) AS nick_name,
+            any_value(tu.avatar) AS avatar,
+            any_value(tbr.ornament_id) AS ornaments_id,
+            any_value(tto.name) AS item_name,
+            any_value(tbr.ornaments_price) AS ornaments_price,
+            any_value(tto.image_url) AS image_url,
+            any_value(tbr.`status`) AS `status`,
+            any_value(tbr.source) AS source,
+            any_value(tbr.fight_id) AS fight_id,
+            any_value(tbr.roll_id) AS roll_id,
+            any_value(tbr.create_time) AS create_time,
+            any_value(tbr.update_time) AS update_time
+        FROM tt_user tu
+                 LEFT JOIN tt_box_records tbr ON tu.user_id = tbr.holder_user_id
+                 LEFT JOIN tt_ornament tto ON tto.id = tbr.ornament_id
+        <where>
+
+            <if test="userIds.size > 0">
+                and tbr.holder_user_id in
+                <foreach item="uid" collection="userIds" open="(" separator="," close=")">
+                    #{uid}
+                </foreach>
+            </if>
+
+            <if test="sources.size > 0">
+                and tbr.source in
+                <foreach item="source" collection="sources" open="(" separator="," close=")">
+                    #{source}
+                </foreach>
+            </if>
+
+            <if test="beginT != null and endT != null">
+                and tbr.create_time between #{beginT} and #{endT}
+            </if>
+
+        </where>
+
+
+        where
+            tbr.holder_user_id = #{userId}
+        AND
+            tbr.source in
+            <foreach item="source" collection="sources" open="(" separator="," close=")">
+                #{source}
+            </foreach>
+        and
+            tbr.create_time > #{begin}
+        and
+            tbr.create_time &lt; #{end}
+        ORDER BY
+            tbr.ornaments_price DESC
+            LIMIT 0,1
+    </select>
+
+    <select id="allEmployeesByParents" resultType="java.lang.Integer">
+        select
+            user_id
+        from
+            tt_user
+        <where>
+            parent_id in
+            <foreach item="bid" collection="bossIds" open="(" separator="," close=")">
+                #{bid}
+            </foreach>
+            and del_flag = 0
+        </where>
+
+    </select>
+    <select id="getBdPromotionRegisterByChannelId" resultType="java.lang.Integer" parameterType="java.lang.Integer">
+        SELECT
+            count(*)
+        FROM
+            tt_user
+        WHERE
+            bd_channel_id = #{id}
+    </select>
+
+
+</mapper>

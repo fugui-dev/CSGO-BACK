@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.playingmethod.mapper.ApiLuckyUpgradeMapper">
+
+    <select id="getOrnamentsList" resultType="com.ruoyi.domain.vo.ApiLuckyOrnamentsDataVO" parameterType="com.ruoyi.domain.other.ApiLuckyUpgradeBody">
+        SELECT tuo.id,
+               tto.name,
+               tto.id as ornamentId,
+               tto.use_price,
+               tto.image_url,
+               tto.short_name,
+               tto.name as ornamentName,
+               tto.type_name,
+               tto.rarity_name,
+               tto.exterior_name,
+               tol.level_img,
+               tol.id,
+               'str1' as str1
+        FROM tt_upgrade_ornaments tuo
+                 LEFT JOIN tt_ornament tto ON tuo.ornaments_id = tto.id
+                 LEFT JOIN tt_ornaments_level tol ON tuo.ornaments_level_id = tol.id
+        <where>
+            <if test="id != null"> AND tuo.id = #{id} </if>
+            <if test="type != null"> AND tto.type = #{type} </if>
+            <if test="itemName != null"> AND tto.name LIKE CONCAT('%',#{itemName},'%') </if>
+            <if test="priceMax != null"> AND tto.use_price BETWEEN #{priceMin} AND #{priceMax} </if>
+            <if test="priceMax == null"> AND tto.use_price > 0 </if>
+        AND tuo.`status` = '0'
+        </where>
+        ORDER BY str1 ASC
+        <if test="isLevelDesc != null and isLevelDesc == 1"> , tol.id DESC </if>
+        <if test="isLevelDesc != null and isLevelDesc == 0"> , tol.id ASC </if>
+
+        <if test="isPriceDesc != null and isPriceDesc == 1"> , tto.use_price DESC </if>
+        <if test="isPriceDesc != null and isPriceDesc == 0"> , tto.use_price ASC </if>
+
+        <if test="isPriceDesc == null"> , tto.use_price DESC</if>
+
+    </select>
+    <!--    AND tto.is_proprietary_property = '1' -->
+
+
+    <select id="getUpgradeRecord" resultType="com.ruoyi.domain.vo.ApiLuckyUpgradeRecordDataVO">
+        SELECT
+            tu.nick_name,
+            tu.avatar,
+            CONCAT(ROUND((tur.amount_consumed / tur.target_ornaments_price) * 100, 2), '%') AS probability,
+            tur.amount_consumed,
+            tto.name AS gainItemName,
+            tur.gain_ornaments_price,
+            tto.image_url,
+            tur.is_victory,
+--             CASE WHEN tur.gain_upgrade_fail_id = 0 THEN 0 ELSE 1 END AS result,
+            tur.open_time
+        FROM tt_upgrade_record tur
+                 LEFT JOIN tt_user tu ON tu.user_id = tur.user_id
+                 LEFT JOIN tt_ornament tto ON tur.gain_ornament_id = tto.id
+        <where>
+<!--            <if test="userType == '01'"> AND tu.user_type = '01' </if>-->
+<!--            <if test="userType == '02'"> AND tu.user_type = '02' </if>-->
+            <if test="userId != null"> AND tur.user_id = #{userId} </if>
+            <if test="upgradeRecordId != null"> AND tur.target_upgrade_id = #{upgradeRecordId} </if>
+            AND tur.user_type = #{userType}
+            AND tur.target_ornaments_id = #{ornamentId}
+        </where>
+        ORDER BY tur.open_time DESC
+    </select>
+</mapper>

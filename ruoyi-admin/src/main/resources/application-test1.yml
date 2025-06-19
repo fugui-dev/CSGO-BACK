@@ -1,0 +1,238 @@
+# 日志配置
+logging:
+  level:
+    com.ruoyi: info
+    org.springframework: info
+
+mybatis-plus:
+  configLocation: classpath:mybatis/mybatis-config.xml
+
+# 项目相关配置
+ruoyi:
+  # 名称
+  name: Skins
+  # 版本
+  version: 3.8.6
+  # 版权年份
+  copyrightYear: 2023
+  # 实例演示开关
+  demoEnabled: true
+  # 文件路径 示例（ Windows配置D:/ruoyi/uploadPath，Linux配置 /home/ruoyi/uploadPath）
+#  profile: D:/ruoyi/uploadPath
+  profile: /home/kx/static
+#  profile: /www/static
+  # 获取ip地址开关
+  addressEnabled: true
+  # 验证码类型 math 数字计算 char 字符验证
+  captchaType: math
+  # 项目全局域名配置
+#  domainName: http://192.168.3.25:${server.port}
+#  domainName: http://localhost:${server.port}
+#  domainName: https://api.wywl.online/prod-api
+  domainName: ""
+  serverBaseUrl: https://api.wywl.online/prod-api
+
+#oss配置，默认不启用，详细参数在静态方法内部，开启时请配置domainName为空字符串
+oss:
+  enable: false
+
+# 数据源配置
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driverClassName: com.mysql.cj.jdbc.Driver
+    druid:
+      # 主库数据源
+      master:
+        url: jdbc:mysql://152.136.63.254:3306/db_fire?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+        #url: jdbc:mysql://123.60.170.219:3306/mkcsgo_test?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+        username: db_fire
+        password: kx6123ZTttLLeSHYE7n
+#        username: root
+#        password: "&45-gym&kt.D"
+      # 从库数据源
+      slave:
+        # 从数据源开关/默认关闭
+        enabled: false
+        url:
+        username:
+        password:
+      # 初始连接数
+      initialSize: 5
+      # 最小连接池数量
+      minIdle: 10
+      # 最大连接池数量
+      maxActive: 20
+      # 配置获取连接等待超时的时间
+      maxWait: 60000
+      # 配置连接超时时间
+      connectTimeout: 30000
+      # 配置网络超时时间
+      socketTimeout: 60000
+      # 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒
+      timeBetweenEvictionRunsMillis: 60000
+      # 配置一个连接在池中最小生存的时间，单位是毫秒
+      minEvictableIdleTimeMillis: 300000
+      # 配置一个连接在池中最大生存的时间，单位是毫秒
+      maxEvictableIdleTimeMillis: 900000
+      # 配置检测连接是否有效
+      validationQuery: SELECT 1 FROM DUAL
+      testWhileIdle: true
+      testOnBorrow: false
+      testOnReturn: false
+      webStatFilter:
+        enabled: true
+      statViewServlet:
+        enabled: true
+        # 设置白名单，不填则允许所有访问
+        allow:
+        url-pattern: /druid/*
+        # 控制台管理用户名和密码
+        login-username: ruoyi
+        login-password: 123456
+      filter:
+        stat:
+          enabled: true
+          # 慢SQL记录
+          log-slow-sql: true
+          slow-sql-millis: 1000
+          merge-sql: true
+        wall:
+          config:
+            multi-statement-allow: true
+  # redis 配置
+  redis:
+    # 地址
+#    host: 47.106.150.25
+    host: localhost
+    # 端口，默认为6379
+    port: 6379
+    # 数据库索引
+    database: 0
+    # 密码
+#    password: FireSkins@99999
+    password: 123456
+    # 连接超时时间
+    timeout: 10s
+    lettuce:
+      pool:
+        # 连接池中的最小空闲连接
+        min-idle: 0
+        # 连接池中的最大空闲连接
+        max-idle: 8
+        # 连接池的最大数据库连接数
+        max-active: 8
+        # #连接池最大阻塞等待时间（使用负值表示没有限制）
+        max-wait: -1ms
+  rabbitmq:
+#    host: 127.0.0.1
+#    port: 5672
+#    username: guest
+#    password: guest
+    host: 152.136.63.254
+    port: 5672
+    username: mkcsgo
+    password: mkcsgo
+    virtual-host: /mkcsgo
+    listener:
+      simple:
+        acknowledge-mode: MANUAL
+#        prefetch: 1 #每次从队列中取一个,轮询分发，默认是公平分发
+#        retry:
+#          max-attempts: 5 # 重试次数
+#          enabled: true # 开启重试
+zbt:
+#  appKey: bfb344da84660d8407e88f38deac1385
+  appKey: cee2fc5153014bcdeba8338a00dce2c5
+#  appKey: FCBB268c850394df347315ecaf8f0332
+  language: zh_CN
+  appId: 730
+  baseUrl: https://app.zbt.com
+alipay:
+  serverUrl: https://openapi.alipay.com/gateway.do
+  format: JSON
+  charset: utf-8
+  signType: RSA2
+  merchants:
+    - appId: 2021003192641091
+      privateKey: MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQCyxsEVcxE8PAc9OvIJJ6Gyh87BQYzx2g6YM7dUmrPAYDJYY82ss4+k5bS7G/w9Dq9s54F3kxt8N9GsLGnSMl5A1hibEyH6ZipjFm2xxBC7WjwcD42daQYx/0OiZq37ERCnOXnaFvUzOXQMJrONSygWs4MOJTt5rY5RtjdNL+zCQOD3NTKTV2Rf4g0V2RJLv+UxCLyj3LgNYn014IUy3iBqd6x15r5x9Jp4WSIKu/E+Dq1SL2QVOjYTWDLtoA/RRUN8vS6g9tUU0xCNf6UqwO/To4FkiJPRByJEp51MW0tF0eZXMO7LvBNhNKxDHrotIGu8aoNzS94Zs4UncgAcE+zTAgMBAAECggEBAJnTFnQkTCIt7HSs8XEbHrCE1kvG4UWAQKqJZSdw7VWL8AXJ6kC9R820sGuGyuSmbB8im22NsEqTpN+mX28zU5IqJYXZUpUnrzUPKVeZwmPSYoIqh8l3gpMmdsWX3/91UYTxmX0j39sxhj6mVjwu/NF7qDpVovUxdpGsXa0WnXsN8dBKyxBC9LUVpt4rdSp/Upme9RNhYy8b2hD7zMA0T/PNJ8EgltrGJ4u4750eOZLl9Kb2w69dzOfzlI08b5IH7bBqdX8i4Q145aBGNRKFAJ3yY32zGVW8MELfKCCvnARj8tkVFHAgYN/SbFU7KNi4hvgtQ3+ScLXWMRVjLANetrECgYEA7bsIiZR0Xp+TZgFn18c+5O/y6EmM7e3ucOsmM9cgDtPlwj3wfo5DgxeXujrs8EutqLwZpbtSXTGveDHEmgeeHiPkdN0OBbJoMt64aCg4lbXg4NPzz06f0fxbyBQlllBEk84jcrmxGXCfhdTRQkbDr/Kb8137TB7b7EpyEc5gT48CgYEAwIPkQxvAN0Mf9NRZBnuDSwxDFEWUruQMucNu1L2SEXE/aQ9GSVpwiKNC9OQFRPwBaVkG8Nn54Mp8VjyhDBb1iBPLnXTziEMccwc0mvi8QUwdww7P/UMoNdHPTSKHYkxcy5bc9Mv4whAXlAYEL7VTdvPV3UPuBx1lJ0LMn+hXrH0CgYEAuaqJUGoROJWImPIgF/YUuNht7d0DpA9fWfFNNM+eyfXUS4/0c+LH92pFpby/sCxqxI2jujxCZ2aWlFjKI0Ivy3pcwqiievCLUK+BdldzWfliWDUxBYdyap2dUPXrJSorZQRpywAbwLKk4/ECPbDmxFPGWJvd1+WB/VlnHWEA9yECgYEArsgPuQ282W9L2A/iM4x3iu87B3CUqKPLGexg9yyVLNjQZSXE/lvpx2PSKlvKnPLepTJ6prh/sKKld/XbkQpXKJAwUGgZoiCr95MXI4un/vCIJMuR8bHDE/nEZ5dtqsUBiqURPf7hfe72OSGtM1NAz8JY7GX7+OGrMJXpCVT8JFECgYBisYoCXPO766ZRLyV2Z4dOHvQLVsmWTi24R8SPeFU2MtKOeSC8HtE3HDrxoh0U77MEBT03ry08gC62LRnrk9JsZF1RuYnZB4BE2p14P6TQol7kQEQYBjmFEr/yqdiaFRsUkYGxV9uGo3qPjF89vOzRcU5JpeWGRZgoHaMGLoCU9A==
+      alipayPublicKey: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAp9pzpS3Czr4w2L32WhpbzL3S5+n7iUITQ3kmBKdaVLojB7/c3H0em9q90quuxKPeH2kOBhPOhLGWUfUcMKObswq/aMgDkoKqA4fAKmT07YVxxduxvEO6z0uwjjP/WGpuFtoGCMhEb5V8xKd+mvpkAblpekJjKPdmAnc/h/sXf8VGDX3czo33zDuxHupR4s1alJKHs3K/p9R0OH5RkxYv0D+I768nNG/ggWmQfdPfwqAeULDO7l4v97jfBaD7cUOtgNW9NCoganO4fSccfZXPSx8i8K8/TSbcbkJtgf2h+g9VMce9xBe9WdTJ7Ke/zMBHXKr4WHJag4Q6RcQPIO5i+QIDAQAB
+    - appId: 2021004123644520
+      privateKey: MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDAIo671+v6aE9oge8kxaKjWjpY75tbAr0B3DRuQT4k0drrK11LgH195QmPl17ecXJMFzL5x9isXyr48OwKTB8T4c9d6qOOnKRxOg+rU8qf5BdkeYpEoX5x0J8BsTxfHL9yTeLgC7dDRSDzeqMagf/+ySpQlwCwAlZRAW6tV4ffaS0boMsasYbAUtavS1VBaEtyPrXuqfL3FG5M29ZgwoMz8sHBATNUoE9gqc7O5uiwif+x+SkXnQvkTkws+EHlzFVXmdxG+2ONi7+0TTckofs3TaEa03nKInvcremEk2GoZJ7+m60Gbnz1ziGNcI7gvWFlbr4dISpP12TbPdX1GNivAgMBAAECggEAXwN35Eql5qIYysyej2ewwulGu15aTEpxX28e+nsHGTwx72P1cfXrmQtfjAPGJWiipiA+1CjQ7ITvgkXZ5Em6gKGFY6M6GLc71sZoo0f/hsxMCSLVjpTyK6SITVTxTvOvdP4xOKxyhzCzV9SIvf4Vs1CVvV6/N0sgllSH/+6uQXsrq1+3hm6d487UUcEebkN+ChjmKc5Ht9nzaBXdSw7Ee419KN61cyE1Tovoie6O+rWNBAVbYHEONxCZ72agc6Hau9clfIrdyKX5FFL+WvgNiKRtuPpxThHIwtfLEQvE9ajLE3zwgY6/gdGqDiwb8SntuVAaiQdSu/cXLSq6g9CkiQKBgQD52dIxi9tveHU7RImgsn3H8P13AjnmRyoNBXCvH8AjbA7XEdsIg2kqEZxchjFB6reTHWalacdS6FFLdNXj/nUW6UXXk/+Lq4A66GNx4CQ0xvFwe9e9fgxMPkIGXiX2vu6gZbRqcIHXZOW1PaoYYBQUJ1uBsXDsjAnKEVAsOnHQAwKBgQDE3RlfeaJXfx8k+WTh2SzxNcOkHtqQYQG6Pt6iYoI1O+tmPvvXd8T2L2AsIkesf1ew5w0YsCliUKreW8IoXKepPoQpEZyJ7mKdnvF/lR8Z5w8t5ooZAxlMsLQNvC/GAhmX+IFczni8V6eAeqptpUY/p3s2WGJh3nzL3Q19oeNC5QKBgB379w69IwuAoEkJk562bQPmtvRmTv6EwdYoNfq+S7e0ix9iZC/kXWWQEXzFGfo4Kem82Im3ZRVdDgyJK/Ydnn2uZxRVDZD8dvoa03xiEtZGnckLA7wY+W7Y9eF/wPyYs1iKfBleAScRU8Ppb5VXSnGUu5WX7t5ke/RFGaMFLI1zAoGAJRUk52gpHWQzwKo9x5E6NwGSpcKuFw4+3g9jrqDxuAdeczcgB1lnP5xy+D1I1QRzxz3uqJzeXselOBd+vk2dw3KkQHwxyYWfC+PZx9eWMTHmGRZZIxcDV//dGs09DoZsvcSw0YOPGKNGSRxSKC8+yVTKD9WcSqU3SsuL9ANfpMUCgYEAia180sMrlG6CnxYAwabtDeZYF6r144UZf6Jq9Lv4YQ6gJfkA4ICyPXu9yhPG131Rv2wIdeSPBe2YEKmhvLGo9LKRDcsxdKrhNjsJptgIg1H/O8+1TwR0IMtDHzEl0pK7pex5I67z90CopSOi86GqFxYw5NVeo6iNr0tJjPNB4nc=
+      alipayPublicKey: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAo74rMuIJV0Ia9bqrUkE2BHjtd2er6+6A1s40XqYyn5JpIA00TPPsVSZjgfFgeQqgbYSNAaV7ROLy4oYZvFr/lWZCuvtLKPWhizv1A+hXTMJp8QDGEdzK5ATPFEPiTZ96xe50cvhoWtHj0H8KnJv8MjSPyyyWKIQ4slMYT9i/f5zii98B6mkxS6+iAPHrnLC7PK+x26YvOi8nCjeWlXfZdz9r8eJdjM3vxgGC2PPTFnG6BAX2REA45RWYCE49RxOjxOOsEQv03rolbzq3eU9kZ5Wh9hHLxO03BFrl8GRtOomby6HsY71/nIjOMCcrnX+vOV7qzJlIwvMfOlFhua1NaQIDAQAB
+  RealNameAuthenticationReturnUrl: http://www.baidu.com
+jiu-jia-pay:
+  aliPayUrl: https://zhifu.jiujiaka.com/alipay
+  memberId: 96203
+  appKey: 7a414cb5fba15e1
+  apiSecret: 46bceaeae0720272bb
+#  memberId: 96254
+#  appKey: 85f5a3fa798bd7
+#  apiSecret: 75cef2bf7e14876ee1
+  apiDomain: http://o7csgo.com/
+  callbackUrl: ${ruoyi.domainName}/api/jiuJiaPay/callback
+yun-xin:
+  serverUrl: https://api.netease.im/sms
+  appKey: caa80bbb83e28638ac8cc4aeed46b85e
+  appSecret: 5daf52e0c256
+  templateId: 22512950
+yy-youping:
+  appKey: 4635531
+  publicKey: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsKs+kh3AZTsygJHBLnk/RPfhQeP5aMX4fbsiOqe3ppmWAEy3HllHcINzDDl4yUCl6ApOS3gVpwN4TZ645BHEq6MkYZrTa6y4XkzKRawBd8Q+mD9/1NR3pckDZhO6F41VH2+Gj2FbOJ+QA2lZTSrPikHLegM2gaZNFv0Tpc4mxHTF273XwyJi7604BxHbrySzbBTVFEn27ejekJ/fWRajxlHiSrbTvfr8t8t7sosW5c7OBq0JaEa22rjj7OvejyWHbUDA6dZnrFWe53y/DRfhlr46O97VMDhiAVT9nyUtBnpFIFZaJJlSNaOg5sE5rL+WEZB4yITBatxoe+MB2jlZ7wIDAQAB
+  privateKey: MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCwqz6SHcBlOzKAkcEueT9E9+FB4/loxfh9uyI6p7emmZYATLceWUdwg3MMOXjJQKXoCk5LeBWnA3hNnrjkEcSroyRhmtNrrLheTMpFrAF3xD6YP3/U1HelyQNmE7oXjVUfb4aPYVs4n5ADaVlNKs+KQct6AzaBpk0W/ROlzibEdMXbvdfDImLvrTgHEduvJLNsFNUUSfbt6N6Qn99ZFqPGUeJKttO9+vy3y3uyixblzs4GrQloRrbauOPs696PJYdtQMDp1mesVZ7nfL8NF+GWvjo73tUwOGIBVP2fJS0GekUgVlokmVI1o6DmwTmsv5YRkHjIhMFq3Gh74wHaOVnvAgMBAAECggEAc0FUkbiNIr2q5cuw7uO0zga00uqqdJrq0QO7ge6W1j5OaKWjtU3jWFi5Pplj3k+prKbEi2GtJocR/fl1f3zEBIFrI64BDbbhlMueDjP3xS2m9GZAvBVcdTCdYgOunNzcUqTMcU+/VkJqjn80/i3WtcjUuSXNcmmO01eJcNr72Z+K516kcO0bzWfMoownENJZUlE/fm+gv3nTZzcYiGh1EIRAr4xboSQ0IOYq8/aB5lHprqDmT6AQOs7RU392+4rpNisBsq1V6owKHS2KACI8qHKSI3meuosWfHvGRO6jOs9WoiPmDxm5wVdnW009hja/9K7NT3XL+TECd2B7sG05YQKBgQDg1fvMxKfTEratWR9KOHWoRbEtmXfz/Qd7kAT3PyxRIPM8bn/kLCFbr1ky6MIJNAL+32Sf+0/Kcop1g00vx/1ebXh51rgMfZtYbo+JCLFlY62mQ5kZfUppHPtxSWsS8zwJlvrQ0CMLZbSSk3VRKCgo8IncxqrZx44RAXbJca5TXwKBgQDJKB4Y9bEQEQ6+TXJT+iCMuUSMvCsYDXfBD7b++hLEKkTHvUCfaSKqCaj+c4sL9AIXwYIRGvfSjaIwV9sbU8IoJHeST5G4xoUHkLeprPrabaPemuKbcVer1YdnGYc0zRhMZpippqk//Gil5bhEWNs9qaV8CbA15uZyZWskZfmTcQKBgAwW9Yc5O9z5sKD5ndkb2BfIR5KwIecYwAJA6ENzPirOnsWtG2tlhBWuBBncsjJUfaS+1mZT2SKFrjRLbycWleUx9bx3c0YYqvXCXC1+LivJhFjgYachOZMVX9/jlsJaGexaFfqMdpXyThdjnndStXYeGQuqEx3KwTTg40ZJupn5AoGAPVNpuZpN3OQWZpYd4NRE0CI7b9x+FtskQ0uTMrDyv7NTPMHJzc+zrbs8NjbrkT1W1f88tBJQs3RSmgJu3inu62YSvhxcBMUhEWlhVO1TnPwIFXmK1HD9lXmHyjrSKZrNaZ1ttWsF9mfxT4J1ZwDf9jCeLu6VNhmq7/1TaMleCUECgYAjTsRObrXx+m1DniyBrJwPD7sfiZpxIQQBHwBHXkJOrg9rqx+KVYwnP7J5dI/1GE0CEg/APICuJafc51775UyvuJEhX2vsZxVnahb6kJALyUh0+PoPtoX8dTTclGne7MUT2tSiWgwtmbfDNyJzU1DEe9Hqwreep9QKdeey/9UTig==
+  ornamentsFilePath: D:/project/mkcsgo/yy-file/
+zy-zfb:
+  merKey: ePOACAp3jvyvLP0oxaEqQrA8KdUbqpTo
+  gateway: http://115.29.205.51:8040
+  tranType: 2004
+  merchantId: '0236820267'
+  notifyBaseUrl: ${ruoyi.domainName}
+mayi:
+  gateway: http://www.688fu.com
+  apiKey: agr4f62hd4j8hvqxshgescb2iqcczss2
+  memberid: 10045
+  payBankCode: 935
+  notifyBaseUrl: http://www.mkcsgo.com/
+  callBackUrl: http://www.mkcsgo.com/prod-api
+mkcsgo:
+#  startLoadOrnaments: false
+  startLoadOrnaments: true
+  fight:
+    roundTime: 8000
+  upgrade:
+    defaultRequired: 160
+    anchorDefaultRequired: 100
+
+qsconfig:
+  apiUrl: https://abc.tianlicloud.com/
+  merchantId: 1015
+  apiKey: DWX9uDKeGkZdE9QKyedyGWX3l7ET7u9t
+  notifyUrl: http://api.wywl.online/prod-api/api/qs/notify
+
+#招财支付
+zcconfig:
+  apiUrl: http://9ec2518d.zhaocai202403.xyz
+  appId: 1067092
+  apiKey: l78ScetDKbOpcOfIONhgn6WMGFo5Q6ad
+  notifyUrl: http://api.f99skins.com/prod-api/api/zcPay/notify
+  successUrl: http://f99skins.com
+  errorUrl: http://f99skins.com
+
+
+#AB支付
+abconfig:
+  apiUrl: https://h5gw01.slpayuat.com
+  appKey: 8d5f5e0174104d9785d40ec845f19faa
+  notifyUrl: http://api.f99skins.com/prod-api/api/abPay/notify
+  privateKey: 4o6rEp1N8EEgzoUr5AhJSJJLVca18eDquy91QvE43U1E
+  generalQueryKey: 4Ss5hZjQ6wjE5XTb1NLg1sENAkeZJUtZVdc7UesvzuS8
+
+#实名2对接
+realName2:
+  url: https://puhui.shumaidata.com/id_card/check/puhui
+  appCode: 7a79999819b54d33a72fe0b67be823c6
+
+dxb:
+  enable: true
+  username: aa1217017
+  password: 413b38b8aff34d35938bc97d66f33c5f

@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtUserAmountRecordsMapper">
+
+    <select id="queryList" resultType="com.ruoyi.domain.entity.recorde.TtUserAmountRecords"
+            parameterType="com.ruoyi.domain.other.TtUserAmountRecordsBody">
+        SELECT
+            tuar.id,
+            tuar.user_id,
+            tuar.type,
+            tuar.source,
+            tuar.amount,
+            tuar.final_amount,
+            tuar.create_time,
+            tuar.remark
+        FROM tt_user_amount_records tuar
+        LEFT JOIN tt_user tu ON tu.user_id = tuar.user_id
+        <where>
+            <if test="userId != null">AND tuar.user_id = #{userId}</if>
+            <if test="nickName != null">AND tu.nick_name LIKE CONCAT('%',#{nickName},'%')</if>
+            <if test="phoneNumber != null">AND tu.phone_number = #{phoneNumber}</if>
+            <if test="type != null">AND tuar.type = #{type}</if>
+            <if test="source != null">AND tuar.source = #{source}</if>
+            and amount != 0
+        </where>
+        ORDER BY tuar.id DESC
+    </select>
+
+    <select id="rank" resultType="com.ruoyi.domain.vo.TtUserAccountRecordsRankVO">
+        SELECT
+            f.user_id user_id,
+            f.amount amount,
+            tt_user.user_name user_name,
+            tt_user.nick_name nick_name,
+            tt_user.avatar avatar,
+            ROW_NUMBER() OVER(ORDER BY f.amount DESC) account_rank
+        FROM
+            (
+                SELECT
+                    any_value(user_id) user_id,
+                    SUM(amount) amount
+                FROM
+                    tt_user_amount_records
+                WHERE
+                        id IN (
+                        SELECT
+                            id
+                        FROM
+                            tt_user_amount_records
+                        WHERE
+                            create_time > #{beginT}
+                          and
+                            create_time &lt; #{endT}
+                          AND
+                            `source` IN (1,2,3,5)
+                          AND
+                            `amount`>=0
+                    )
+                GROUP BY
+                    user_id
+            ) f LEFT JOIN tt_user ON f.user_id = tt_user.user_id
+            LIMIT
+            #{page},#{size}
+    </select>
+
+    <select id="pWHistoryTotal" resultType="java.math.BigDecimal">
+        select
+            sum(amount)
+        from
+            tt_user_amount_records
+        where
+            user_id = #{uid}
+        and
+            source = 13
+    </select>
+
+    <select id="blendErcashRank" resultType="com.ruoyi.domain.vo.UserBERankVO">
+
+        SELECT
+            t1.user_id,
+            tu.nick_name,
+            tu.avatar,
+            t1.amount,
+            t1.credits,
+            t1.total,
+            t1.create_time,
+            t1.update_time,
+            ROW_NUMBER() OVER(ORDER BY t1.total Desc) be_rank
+        FROM (
+
+            select
+                tube.user_id,
+                ABS(SUM(tube.amount)) amount,
+                ABS(SUM(tube.credits)) credits,
+                ABS(SUM(tube.total))  total,
+                MAX(tube.create_time) create_time,
+                MAX(tube.update_time) update_time
+            from
+                tt_user_blend_ercash tube
+            <where>
+                <if test="beginT != null and endT != null">
+                    and tube.create_time between #{beginT} and #{endT}
+                </if>
+                and tube.type = 0
+                <if test="sourceList.size > 0">
+                    and tube.source in
+                    <foreach collection="sourceList" item="sou" open="(" separator="," close=")">
+                        #{sou}
+                    </foreach>
+                </if>
+            </where>
+            GROUP BY tube.user_id
+        ) t1
+        left join tt_user tu on tu.user_id = t1.user_id
+        LIMIT #{limit},#{size}
+
+    </select>
+
+    <select id="recordsByTimeAndHasBoss" resultType="com.ruoyi.domain.vo.task.SimpleAmountRecordVO">
+
+        SELECT
+            tuar.id,
+            tuar.user_id,
+            tuar.type,
+            tuar.source,
+            tuar.amount,
+            tuar.final_amount,
+            tuar.create_time,
+            tuar.remark,
+            tu.parent_id
+        FROM tt_user_amount_records tuar
+        LEFT JOIN tt_user tu ON tu.user_id = tuar.user_id
+        where
+            tuar.create_time between #{beginT} and #{endT}
+        and
+            tu.parent_id is not null
+        and
+            tu.parent_id != 0
+        and
+            tuar.amount != 0
+        and
+            tuar.type = 0
+        ORDER BY tu.parent_id DESC
+
+    </select>
+
+    <select id="totalSize" resultType="java.lang.Integer">
+        select
+            count(1)
+        from tt_user_amount_records tuar
+        <where>
+            <if test="userId != null">AND tuar.user_id = #{userId}</if>
+            <if test="nickName != null">AND tu.nick_name LIKE CONCAT('%',#{nickName},'%')</if>
+            <if test="phoneNumber != null">AND tu.phone_number = #{phoneNumber}</if>
+            <if test="type != null">AND tuar.type = #{type}</if>
+            <if test="source != null">AND tuar.source = #{source}</if>
+            and amount != 0
+        </where>
+
+    </select>
+
+    <select id="BlendErcashByTimeAndHasBoss" resultType="com.ruoyi.domain.vo.task.SimpleBlendErcashRecordVO">
+
+        SELECT
+            tube.id,
+            tube.user_id,
+            tube.type,
+            tube.source,
+            tube.amount,
+            tube.credits,
+            tube.total,
+            tube.create_time,
+            tube.update_time,
+            tube.remark,
+            tu.parent_id
+        FROM tt_user_blend_ercash tube
+        LEFT JOIN tt_user tu ON tu.user_id = tube.user_id
+        where
+            tube.create_time between #{beginT} and #{endT}
+        and
+            tu.parent_id is not null
+        and
+            tube.type = 0
+        ORDER BY tu.parent_id DESC
+
+    </select>
+
+    <select id="pWelfareByTime" resultType="java.math.BigDecimal">
+
+        SELECT
+            sum(tube.total)
+        FROM tt_user_blend_ercash tube
+        LEFT JOIN tt_user tu ON tu.user_id = tube.user_id
+        where
+            tube.create_time between #{beginT} and #{endT}
+          and
+            tube.user_id in (
+
+                select
+                    user_id
+                from
+                    tt_user
+                where
+                    parent_id = #{bossId}
+
+                )
+          and
+            tube.type = 0
+        ORDER BY tu.parent_id DESC
+
+    </select>
+
+    <select id="bossByHasConsumeEmployee" resultType="java.lang.Integer">
+        SELECT
+            any_value(tu.parent_id)
+        FROM tt_user_blend_ercash tube
+        LEFT JOIN tt_user tu ON tu.user_id = tube.user_id
+        where
+            tube.create_time between #{beginT} and #{endT}
+          and
+            tu.parent_id is not null
+          and
+            tube.type = 0
+          AND tube.`source` IN ( 2, 4, 8 )
+        group by tu.parent_id
+    </select>
+
+    <!--
+                tube.id,
+                tube.user_id,
+                tube.type,
+                tube.source,
+                tube.amount,
+                tube.credits,
+                sum(tube.total),
+                tube.create_time,
+                tube.update_time,
+                tube.remark,
+                tu.parent_id
+    -->
+
+    <select id="getTotalConsumptionByUserId" parameterType="Integer" resultType="BigDecimal">
+        SELECT SUM(amount) FROM tt_user_amount_records WHERE type = 2 AND user_id = #{userId}
+    </select>
+</mapper>

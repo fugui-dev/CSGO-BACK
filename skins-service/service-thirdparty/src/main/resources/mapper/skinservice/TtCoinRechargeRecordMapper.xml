@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.thirdparty.wechat.mapper.TtCoinRechargeRecordMapper">
+    
+    <resultMap type="com.ruoyi.thirdparty.wechat.entity.TtCoinRechargeRecord" id="TtCoinRechargeRecordResult">
+        <result property="id"    column="id"    />
+        <result property="coin"    column="coin"    />
+        <result property="payStatus"    column="pay_status"    />
+        <result property="uid"    column="uid"    />
+        <result property="uname"    column="uname"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="orderNo"    column="order_no"    />
+        <result property="callbackNo"    column="callback_no"    />
+        <result property="callbackMsg"    column="callback_msg"    />
+    </resultMap>
+
+    <sql id="selectTtCoinRechargeRecordVo">
+        select
+            id,
+            coin,
+            pay_status,
+            uid,
+            uname,
+            create_time,
+            update_time,
+            order_no,
+            callback_no,
+            callback_msg
+        from tt_coin_recharge_record
+    </sql>
+
+    <select id="selectTtCoinRechargeRecordList" parameterType="com.ruoyi.thirdparty.wechat.entity.TtCoinRechargeRecord" resultMap="TtCoinRechargeRecordResult">
+        <include refid="selectTtCoinRechargeRecordVo"/>
+        <where>  
+            <if test="coin != null "> and coin = #{coin}</if>
+            <if test="payStatus != null "> and pay_status = #{payStatus}</if>
+            <if test="uid != null "> and uid = #{uid}</if>
+            <if test="uname != null  and uname != ''"> and uname like concat('%', #{uname}, '%')</if>
+            <if test="orderNo != null  and orderNo != ''"> and order_no = #{orderNo}</if>
+            <if test="callbackNo != null  and callbackNo != ''"> and callback_no = #{callbackNo}</if>
+            <if test="callbackMsg != null  and callbackMsg != ''"> and callback_msg = #{callbackMsg}</if>
+        </where>
+        order BY create_time DESC
+    </select>
+    
+    <select id="selectTtCoinRechargeRecordById" parameterType="Long" resultMap="TtCoinRechargeRecordResult">
+        <include refid="selectTtCoinRechargeRecordVo"/>
+        where id = #{id}
+    </select>
+
+    <select id="selectTtCoinRechargeRecordByOrder" parameterType="String" resultMap="TtCoinRechargeRecordResult">
+        <include refid="selectTtCoinRechargeRecordVo"/>
+        where order_no = #{orderNo}
+    </select>
+    <select id="selectTtCoinRechargeList" resultType="com.ruoyi.thirdparty.wechat.entity.TtCoinRechargeRecord"
+            parameterType="com.ruoyi.thirdparty.wechat.entity.TtCoinRechargeParam">
+        <include refid="selectTtCoinRechargeRecordVo"/>
+        <where>
+            <if test="coin != null "> and coin = #{coin}</if>
+            <if test="payStatus != null "> and pay_status = #{payStatus}</if>
+            <if test="uid != null "> and uid = #{uid}</if>
+            <if test="uname != null  and uname != ''"> and uname like concat('%', #{uname}, '%')</if>
+            <if test="orderNo != null  and orderNo != ''"> and order_no = #{orderNo}</if>
+            <if test="beginTime != null  and beginTime != ''"> <![CDATA[ and create_time >= #{beginTime} ]]></if>
+            <if test="endTime != null  and endTime != ''">     <![CDATA[ and create_time <= #{endTime} ]]></if>
+
+            <if test="minCoin != null "> <![CDATA[ and coin > #{minCoin} ]]> </if>
+
+            <if test="maxCoin != null "> <![CDATA[ and coin <= #{maxCoin} ]]> </if>
+        </where>
+    </select>
+
+    <select id="selectTtCoinRechargeAmout" resultType="java.math.BigDecimal"
+            parameterType="com.ruoyi.thirdparty.wechat.entity.TtCoinRechargeParam">
+        select sum(coin) from tt_coin_recharge_record
+        <where>
+            <if test="coin != null "> and coin = #{coin}</if>
+            <if test="payStatus != null "> and pay_status = #{payStatus}</if>
+            <if test="uid != null "> and uid = #{uid}</if>
+            <if test="uname != null  and uname != ''"> and uname like concat('%', #{uname}, '%')</if>
+            <if test="orderNo != null  and orderNo != ''"> and order_no = #{orderNo}</if>
+            <if test="beginTime != null  and beginTime != ''"> <![CDATA[ and create_time <= #{beginTime} ]]></if>
+            <if test="endTime != null  and endTime != ''"> <![CDATA[ and create_time >= #{endTime} ]]></if>
+            <if test="minCoin != null "> <![CDATA[ and coin > #{minCoin} ]]> </if>
+            <if test="maxCoin != null "> <![CDATA[ and coin <= #{maxCoin} ]]></if>
+        </where>
+
+
+    </select>
+
+    <select id="selectTtCoinRechargeRecordByUid" resultType="com.ruoyi.thirdparty.wechat.entity.TtCoinRechargeRecord">
+        SELECT
+            tcrr.id,
+            tcrr.coin,
+            tcrr.pay_status payStatus,
+            tcrr.uid,
+            tcrr.uname,
+            tcrr.create_time createTime,
+            tcrr.update_time updateTime,
+            tcrr.order_no orderNo,
+            tcrr.callback_no callbackNo,
+            tcrr.callback_msg callbackMsg
+        FROM `tt_coin_recharge_record` tcrr
+        WHERE tcrr.uid=#{id} AND tcrr.pay_status='1'
+    </select>
+
+    <select id="getUserIsRecharge" resultType="com.ruoyi.thirdparty.wechat.entity.TtCoinRechargeRecord">
+        SELECT
+            tcrr.id,
+            tcrr.coin,
+            tcrr.pay_status payStatus,
+            tcrr.uid,
+            tcrr.uname,
+            tcrr.create_time createTime,
+            tcrr.update_time updateTime,
+            tcrr.order_no orderNo,
+            tcrr.callback_no callbackNo,
+            tcrr.callback_msg callbackMsg
+        FROM `tt_coin_recharge_record` tcrr
+        WHERE tcrr.uid=#{id} AND tcrr.pay_status='2'
+    </select>
+
+    <insert id="insertTtCoinRechargeRecord" parameterType="com.ruoyi.thirdparty.wechat.entity.TtCoinRechargeRecord">
+        insert into tt_coin_recharge_record
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null">id,</if>
+            <if test="coin != null">coin,</if>
+            <if test="payStatus != null">pay_status,</if>
+            <if test="uid != null">uid,</if>
+            <if test="uname != null">uname,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="orderNo != null">order_no,</if>
+            <if test="callbackNo != null">callback_no,</if>
+            <if test="callbackMsg != null">callback_msg,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null">#{id},</if>
+            <if test="coin != null">#{coin},</if>
+            <if test="payStatus != null">#{payStatus},</if>
+            <if test="uid != null">#{uid},</if>
+            <if test="uname != null">#{uname},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="orderNo != null">#{orderNo},</if>
+            <if test="callbackNo != null">#{callbackNo},</if>
+            <if test="callbackMsg != null">#{callbackMsg},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTtCoinRechargeRecord" parameterType="com.ruoyi.thirdparty.wechat.entity.TtCoinRechargeRecord">
+        update tt_coin_recharge_record
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="coin != null">coin = #{coin},</if>
+            <if test="payStatus != null">pay_status = #{payStatus},</if>
+            <if test="uid != null">uid = #{uid},</if>
+            <if test="uname != null">uname = #{uname},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="orderNo != null">order_no = #{orderNo},</if>
+            <if test="callbackNo != null">callback_no = #{callbackNo},</if>
+            <if test="callbackMsg != null">callback_msg = #{callbackMsg},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTtCoinRechargeRecordById" parameterType="Long">
+        delete from tt_coin_recharge_record where id = #{id}
+    </delete>
+
+    <delete id="deleteTtCoinRechargeRecordByIds" parameterType="String">
+        delete from tt_coin_recharge_record where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtRollJackpotOrnamentsMapper">
+
+    <select id="queryList" resultType="com.ruoyi.domain.vo.TtRollJackpotOrnamentsDataVO"
+            parameterType="com.ruoyi.domain.entity.roll.TtRollJackpotOrnamentsBody">
+        SELECT
+        trjo.id,
+        trjo.ornaments_id,
+        trjo.ornaments_num,
+        tol.level_img,
+        trjo.create_time,
+        trjo.update_time,
+        tto.name,
+        tto.short_name,
+        tto.use_price,
+        trjo.ornament_level_id as ornament_level_id,
+        tol.level,
+        tto.image_url
+        FROM tt_roll_jackpot_ornaments trjo
+        LEFT JOIN tt_ornament tto ON trjo.ornaments_id = tto.id
+        LEFT JOIN tt_ornaments_level tol ON trjo.ornament_level_id = tol.id
+        <where>
+            <if test="id != null">and trjo.id = #{id}</if>
+            <if test="itemName != null">and tto.name LIKE CONCAT('%',#{itemName},'%')</if>
+            and trjo.jackpot_id = #{jackpotId}
+        </where>
+        ORDER BY trjo.update_time DESC, trjo.create_time DESC
+    </select>
+
+    <select id="rollShow" resultType="com.ruoyi.domain.vo.roll.SimpleRollOrnamentVO">
+        select
+            trjo.jackpot_id as jackpot_id,
+            tto.use_price as price,
+            tto.image_url as img_url,
+            tto.name as ornament_name,
+            tto.type_name as typeName,
+            tto.exterior_name as exteriorName,
+            tol.id as ornament_level_id,
+            tol.level_img as ornaments_level_img,
+            trjo.ornaments_num as ornaments_num
+        from
+            tt_roll_jackpot_ornaments trjo
+        left join tt_ornament tto on trjo.ornaments_id = tto.id
+        left join tt_ornaments_level tol on trjo.ornament_level_id = tol.id
+        where trjo.jackpot_id = #{jackpotId}
+        order by tto.use_price desc
+        limit 0,6
+    </select>
+
+    <select id="listByRollId" resultType="com.ruoyi.domain.vo.roll.RollJackpotOrnamentsVO">
+        select
+            trjo.id as rollJackpotOrnamentId,
+            trjo.ornaments_id,
+            trjo.ornament_name,
+            trjo.ornament_level_id,
+            trjo.ornaments_num,
+            tol.level_img as ornament_level_img,
+            trjo.price,
+            tot.image_url as img_url
+        from tt_roll_jackpot_ornaments trjo
+        left join tt_ornaments_level tol on trjo.ornament_level_id = tol.id
+        left join tt_ornament tot on trjo.ornaments_id = tot.id
+        where jackpot_id = #{jackpotId}
+        order by price desc
+        limit #{limit},#{size}
+    </select>
+
+    <select id="ornamentsNumberOfRoll" resultType="java.lang.Integer">
+        select
+            sum(ornaments_num)
+        from
+            tt_roll_jackpot_ornaments
+        where jackpot_id = #{jackpotId}
+    </select>
+
+    <select id="byOrnamentIds" resultType="com.ruoyi.domain.vo.boxRecords.TtBoxRecordsVO">
+        select
+            trjo.jackpot_id as jackpot_id,
+            tto.use_price as ornamentsPrice,
+            tto.image_url as imageUrl,
+            tto.name as ornamentName,
+            tto.type_name as typeName,
+            tto.exterior_name as exteriorName,
+            tol.id as ornament_level_id,
+            tol.level_img as ornaments_level_img,
+            trjo.ornaments_num as ornaments_num
+        from tt_roll_jackpot_ornaments trjo
+        left join tt_ornament tto on trjo.ornaments_id = tto.id
+        left join tt_ornaments_level tol on trjo.ornament_level_id = tol.id
+        where trjo.jackpot_id = (
+                select jackpot_id from tt_roll where id = #{rollId}
+            )
+        <if test="noHOrnamentIds.size > 0">
+            and trjo.ornaments_id in
+            <foreach collection="noHOrnamentIds" item="ids" open="(" separator="," close=")">
+                #{ids}
+            </foreach>
+        </if>
+        order by tto.use_price desc
+    </select>
+
+    <select id="totalByCondition" resultType="java.lang.Integer">
+        select
+            count(trjo.id) as total
+        from tt_roll_jackpot_ornaments trjo
+        where trjo.jackpot_id = #{jackpotId}
+    </select>
+
+    <sql id="getJackpotIdByRoll">
+        select
+            jackpot_id
+        from
+            tt_roll
+        where id = #{rollId}
+    </sql>
+</mapper>

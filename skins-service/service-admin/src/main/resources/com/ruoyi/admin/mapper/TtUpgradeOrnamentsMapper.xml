@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtUpgradeOrnamentsMapper">
+
+    <select id="queryList" resultType="com.ruoyi.domain.vo.TtUpgradeOrnamentsDataVO" parameterType="com.ruoyi.domain.other.TtUpgradeOrnamentsBody">
+        SELECT
+            tuo.id,
+            tuo.ornaments_id,
+            tto.use_price,
+            tto.name as item_name,
+            tto.image_url,
+            tto.type,
+            tto.type_name,
+            tuo.ornaments_level_id,
+            tol.`level`,
+            tuo.luck_section,
+            tuo.amount_required,
+            tuo.amount_invested,
+            tuo.anchor_luck_section,
+            tuo.anchor_amount_required,
+            tuo.anchor_amount_invested,
+            tuo.`status`,
+            tuo.create_time,
+            tuo.update_time
+        FROM tt_upgrade_ornaments tuo
+                 LEFT JOIN tt_ornament tto ON tuo.ornaments_id = tto.id
+                 LEFT JOIN tt_ornaments_level tol ON tuo.ornaments_level_id = tol.id
+        <where>
+            <if test="itemName != null"> AND tto.name LIKE CONCAT('%',#{itemName},'%') </if>
+            <if test="type != null"> AND tto.type = #{type} </if>
+            <if test="status != null"> AND tuo.`status` = #{status} </if>
+        </where>
+        ORDER BY tuo.id DESC
+    </select>
+
+    <select id="getUpgradeProfitStatistics" resultType="java.util.Map">
+        SELECT
+            COALESCE(SUM(amount_consumed), 0) AS totalAmountConsumed,
+            COALESCE(SUM(gain_ornaments_price), 0) AS totalGainPrice,
+            COALESCE(SUM(amount_consumed), 0) - COALESCE(SUM(gain_ornaments_price), 0) AS totalProfit
+        FROM tt_upgrade_record
+        WHERE target_upgrade_id = #{id}
+    </select>
+</mapper>

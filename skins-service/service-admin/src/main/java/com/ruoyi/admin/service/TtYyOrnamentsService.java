@@ -1,0 +1,7 @@
+package com.ruoyi.admin.service;
+
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.ruoyi.domain.other.TtYYOrnaments;
+
+public interface TtYyOrnamentsService extends IService<TtYYOrnaments> {
+}

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtRedPacketRecordMapper">
+
+    <select id="queryList" resultType="com.ruoyi.domain.vo.TtRedPacketRecordDataVO"
+            parameterType="com.ruoyi.domain.other.TtRedPacketRecordBody">
+        SELECT trpr.id,
+               trpr.red_packet_id,
+               trp.title,
+               trpr.receive_password,
+               trpr.user_id,
+               tu.nick_name,
+               trpr.receive_amount,
+               trpr.receive_time
+        FROM tt_red_packet_record trpr
+                 LEFT JOIN tt_red_packet trp ON trp.id = trpr.red_packet_id
+                 LEFT JOIN tt_user tu ON trpr.user_id = tu.user_id
+        <where>
+            <if test="redPacketId != null">AND trpr.red_packet_id = #{redPacketId}</if>
+            <if test="userId != null">AND trpr.user_id = #{userId}</if>
+            <if test="receivePassword != null">AND trpr.receive_password = #{receivePassword}</if>
+        </where>
+        ORDER BY trpr.receive_time DESC
+    </select>
+</mapper>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.user.mapper.ApiMessageMapper">
+
+    <select id="getMessageList" resultType="com.ruoyi.domain.vo.ApiMessageDataVO">
+        SELECT
+            tms.id,
+            tm.message,
+            tms.`status`,
+            tms.send_time,
+            tms.reading_time
+        FROM tt_message_send tms
+                 LEFT JOIN tt_message tm ON tms.message_id = tm.id
+        <where>
+            <if test="id != null"> AND tms.id = #{id} </if>
+        AND tms.rec_id = #{userId} AND tms.`status` != '2'
+        </where>
+        ORDER BY tms.`status` ASC,tms.send_time DESC
+    </select>
+</mapper>

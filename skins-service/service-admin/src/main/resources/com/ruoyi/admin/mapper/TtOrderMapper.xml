@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtOrderMapper">
+
+    <select id="byCondition" resultType="com.ruoyi.domain.vo.order.TtOrderVO">
+        select
+            *
+        from
+            tt_order tto
+        <where>
+            <if test="userIdList.size > 0">
+                and tto.user_id in
+                <foreach collection="userIdList" item="uid" open="(" separator="," close=")">
+                    #{uid}
+                </foreach>
+            </if>
+            and tto.status = #{status}
+        </where>
+        limit #{limit},#{size}
+    </select>
+
+    <select id="batchRechargeTotal" resultType="com.ruoyi.domain.vo.sys.SimpleTtUserVO">
+
+        select
+            t1.nick_name,
+            t1.avatar,
+            t1.user_type,
+            t2.recharge as recharge,
+            t3.total as be_consume,
+            t3.credits as credits_consume,
+            t3.amount as amount_consume
+        from (
+            <include refid="l1"></include>
+        )t1
+        left join (
+            <include refid="r1"></include>
+        )t2 on t1.user_id = t2.user_id
+        left join (
+            <include refid="r2"></include>
+        )t3 on t1.user_id = t3.user_id
+        order by recharge
+        <if test="orderByType == null or orderByType == 2">desc</if>
+        <if test="orderByType == 1">asc</if>
+        limit #{limit},#{size}
+
+    </select>
+
+    <select id="rechargeTotalOfBoss" resultType="com.ruoyi.domain.vo.sys.SimpleTtUserVO">
+    </select>
+
+    <sql id="l1">
+        <!--左表-->
+        select
+            user_id,
+            nick_name,
+            avatar,
+            user_type
+        from tt_user ttu
+        <where>
+            <if test="userIdList.size > 0">
+                ttu.user_id in
+                <foreach collection="userIdList" item="uid" open="(" separator="," close=")">
+                    #{uid}
+                </foreach>
+            </if>
+
+            <if test="userIdList.size &lt;= 0">
+                ttu.user_id = -1
+            </if>
+        </where>
+    </sql>
+
+    <sql id="r1">
+        <!--右1 补充充值信息-->
+        select
+            any_value(tto.user_id) as user_id,
+            sum(tto.total_amount) as recharge
+        from tt_order tto
+        left join tt_user ttu on tto.user_id = ttu.user_id
+        <where>
+            <if test="userIdList.size > 0">
+                tto.user_id in
+                <foreach collection="userIdList" item="uid" open="(" separator="," close=")">
+                    #{uid}
+                </foreach>
+            </if>
+
+            <if test="beginTime != null and endTime != null">
+                and tto.create_time between #{beginTime} and #{endTime}
+            </if>
+            and tto.status = 4
+        </where>
+        group by user_id
+    </sql>
+
+    <sql id="r2">
+        select
+            any_value(tube.user_id) as user_id,
+            sum(tube.total) as total,
+            sum(tube.credits) as credits,
+            sum(tube.amount) as amount
+        from tt_user_blend_ercash tube
+        left join tt_user ttu on ttu.user_id = tube.user_id
+        <where>
+            <if test="userIdList.size > 0">
+                tube.user_id in
+                <foreach collection="userIdList" item="uid" open="(" separator="," close=")">
+                    #{uid}
+                </foreach>
+            </if>
+            <if test="beginTime != null and endTime != null">
+                and tube.create_time between #{beginTime} and #{endTime}
+            </if>
+            and type = 0
+        </where>
+        group by user_id
+    </sql>
+
+    <sql id="recharge">
+
+        <!--右2 补充消费信息-->
+
+        select
+            t2.user_id as user_id,
+            t2.nick_name as nick_name,
+            t2.avatar as avatar,
+            t2.user_type as user_type,
+            t2.recharge as recharge
+        from (
+
+            select
+                any_value(t1.user_id) as user_id,
+                any_value(t1.nick_name) as nick_name,
+                any_value(t1.user_type) as user_type,
+                any_value(t1.avatar) as avatar,
+                sum(t1.total_amount) as recharge
+            from (
+                select
+                    tto.user_id as user_id,
+                    ttu.nick_name as nick_name,
+                    ttu.user_type as user_type,
+                    ttu.avatar as avatar,
+                    tto.total_amount as total_amount
+                from tt_order tto
+                left join tt_user ttu on tto.user_id = ttu.user_id
+                <where>
+                    <if test="userIdList.size > 0">
+                        tto.user_id in
+                        <foreach collection="userIdList" item="uid" open="(" separator="," close=")">
+                            #{uid}
+                        </foreach>
+                    </if>
+
+                    <if test="beginTime != null and endTime != null">
+                        and tto.create_time between #{beginTime} and #{endTime}
+                    </if>
+                    and tto.status in (1,4)
+                </where>
+            ) t1
+            group by t1.user_id
+
+        ) t2
+        order by t2.recharge
+        <if test="orderByType == 1"> asc</if>
+        <if test="orderByType == 2"> desc</if>
+        limit #{limit},#{size}
+
+    </sql>
+
+    <sql id="consume">
+
+        select
+            any_value(t1.user_id) as user_id,
+            any_value(t1.nick_name) as nick_name,
+            any_value(t1.avatar) as avatar,
+            any_value(t1.user_type) as user_type,
+            sum(t1.total) as be_consume,
+            sum(t1.credits) as credits_consume,
+            sum(t1.amount) as amount_consume
+        from (
+            select
+                tube.user_id as user_id,
+                tube.total as total,
+                tube.credits as credits,
+                tube.amount as amount,
+                ttu.nick_name as nick_name,
+                ttu.avatar as avatar,
+                ttu.user_type as user_type
+            from tt_user_blend_ercash tube
+            left join tt_user ttu on ttu.user_id = tube.user_id
+            <where>
+                <if test="userIdList.size > 0">
+                    tube.user_id in
+                    <foreach collection="userIdList" item="uid" open="(" separator="," close=")">
+                        #{uid}
+                    </foreach>
+                </if>
+                <if test="beginTime != null and endTime != null">
+                    and tube.create_time between #{beginTime} and #{endTime}
+                </if>
+            </where>
+        ) t1
+        group by t1.user_id
+
+--         select
+--         user_id,
+--         be_consume,
+--         credits_consume,
+--         amount_consume,
+--         nick_name,
+--         avatar,
+--         user_type
+--         from (
+--
+--         ) t2
+
+    </sql>
+
+</mapper>

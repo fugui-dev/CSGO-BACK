@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtUserCreditsRecordsMapper">
+
+    <select id="queryList" resultType="com.ruoyi.domain.entity.recorde.TtUserCreditsRecords"
+            parameterType="com.ruoyi.domain.other.TtUserCreditsRecordsBody">
+        SELECT
+            tucr.id,
+            tucr.user_id,
+            tucr.type,
+            tucr.source,
+            tucr.credits,
+            tucr.final_credits,
+            tucr.create_time,
+            tucr.remark
+        FROM tt_user_credits_records tucr
+        LEFT JOIN tt_user tu ON tu.user_id = tucr.user_id
+        <where>
+            <if test="userId != null">AND tucr.user_id = #{userId}</if>
+            <if test="nickName != null">AND tu.nick_name LIKE CONCAT('%',#{nickName},'%')</if>
+            <if test="phoneNumber != null">AND tu.phone_number = #{phoneNumber}</if>
+            <if test="type != null">AND tucr.type = #{type}</if>
+            <if test="source != null">AND tucr.source = #{source}</if>
+            and credits != 0
+        </where>
+        ORDER BY tucr.id DESC
+        <if test="size != null">
+            limit #{limit},#{size}
+        </if>
+    </select>
+
+    <select id="rank" resultType="com.ruoyi.domain.vo.TtUserCreditsRecordsRankVO">
+        SELECT
+            f.user_id user_id,
+            f.credits credits,
+            tt_user.user_name user_name,
+            tt_user.nick_name nick_name,
+            tt_user.avatar avatar,
+            ROW_NUMBER() OVER(ORDER BY f.credits DESC) credits_rank
+        FROM
+            (
+                SELECT
+                    any_value(user_id) user_id,
+                    SUM(credits) credits
+                FROM
+                    tt_user_credits_records
+                WHERE
+                        id IN (
+                        SELECT
+                            id
+                        FROM
+                            tt_user_credits_records
+                        WHERE
+                            create_time > #{begin}
+                        and
+                            create_time &lt; #{end}
+                        AND
+                            `source` IN (1,2,3,5)
+                        AND
+                            `credits`>=0
+                    )
+                GROUP BY
+                    user_id
+            ) f LEFT JOIN tt_user ON f.user_id = tt_user.user_id
+            LIMIT
+            #{page},#{size}
+    </select>
+
+    <select id="recordsByTimeAndHasBoss" resultType="com.ruoyi.domain.vo.task.SimpleCreditsRecordVO">
+
+        SELECT
+            tucr.id,
+            tucr.user_id,
+            tucr.type,
+            tucr.source,
+            tucr.credits,
+            tucr.final_credits,
+            tucr.create_time,
+            tucr.remark,
+            tu.parent_id
+        FROM tt_user_credits_records tucr
+        LEFT JOIN tt_user tu ON tu.user_id = tucr.user_id
+        where
+            tucr.create_time between #{beginT} and #{endT}
+        and
+            tu.parent_id is not null
+        and
+            tu.parent_id != 0
+        and
+            tucr.credits != 0
+        and
+            tucr.type = 0
+        ORDER BY tu.parent_id DESC
+
+    </select>
+
+</mapper>

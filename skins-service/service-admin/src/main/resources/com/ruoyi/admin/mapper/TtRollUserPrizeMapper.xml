@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtRollUserPrizeMapper">
+
+    <select id="byRollUserIds" resultType="com.ruoyi.domain.vo.roll.RollUserPrizeVO">
+        select
+            trup.id as roll_user_prize_id,
+            trup.roll_user_id as roll_user_id,
+            trup.roll_jackpot_id as roll_jackpot_id,
+            trup.roll_jackpot_ornament_id as roll_jackpot_ornament_id,
+            trup.number as number,
+            trup.ornament_id as ornament_id,
+            trup.price as price,
+            trup.ornament_name as ornament_name,
+            trup.img_url as img_url,
+            ttu.user_id as user_id,
+            ttru.roll_id as roll_id,
+            tto.image_url as ornament_img
+        from
+            tt_roll_user_prize trup
+        left join tt_roll_user ttru on ttru.id = trup.roll_user_id
+        left join tt_user ttu on ttu.user_id = ttru.user_id
+        left join tt_ornament tto on tto.id = trup.ornament_id
+        <where>
+            <if test="rollUserIds.size > 0">
+                trup.roll_user_id in
+                <foreach collection="rollUserIds" item="ruid" open="(" separator="," close=")">
+                    #{ruid}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
+    <select id="ownOrnamentNumber" resultType="java.lang.Integer">
+        select
+            sum(number)
+        from tt_roll_user_prize
+        where roll_user_id in (
+                select
+                    id
+                from tt_roll_user
+                where roll_id = #{rollId}
+            )
+        and roll_jackpot_ornament_id = #{rollJackpotOrnamentId}
+    </select>
+
+<!--    <select id="byRollId" resultType="com.ruoyi.domain.vo.roll.RollUserPrizeVO">-->
+<!--        select-->
+<!--            tru.user_id as user_id,-->
+<!--            tru.nick_name as nick_name,-->
+<!--            trup.ornament_id as ornament_id,-->
+<!--            trup.id as roll_user_prize_id-->
+<!--        from-->
+<!--            tt_roll_user_prize trup-->
+<!--                left join-->
+<!--            tt_roll_user tru on tru.id = trup.roll_user_id-->
+<!--        where-->
+<!--            roll_user_id in (-->
+<!--                select user_id from tt_roll_user where roll_id = #{rollId}-->
+<!--            )-->
+<!--        order by-->
+<!--            trup.ornament_id asc-->
+<!--    </select>-->
+
+    <select id="byRollId" resultType="com.ruoyi.domain.vo.roll.RollUserPrizeVO">
+        select
+            trup.id as roll_user_prize_id,
+            tru.roll_id,
+            tru.user_id,
+            tru.nick_name,
+            trup.ornament_id,
+            trup.ornament_name,
+            trup.price,
+            trup.img_url as ornamentImg
+        from tt_roll_user_prize trup
+            left join tt_roll_user tru on trup.roll_user_id = tru.id
+        where tru.roll_id = #{rollId}
+    </select>
+
+</mapper>

@@ -1,0 +1,440 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtUserBlendErcashMapper">
+
+    <select id="rank" resultType="com.ruoyi.domain.vo.UserBERankVO">
+
+<!--        SELECT-->
+<!--            t1.user_id,-->
+<!--            tu.nick_name,-->
+<!--            tu.avatar,-->
+<!--            t1.amount,-->
+<!--            t1.credits,-->
+<!--            t1.total,-->
+<!--            t1.create_time,-->
+<!--            t1.update_time,-->
+<!--&#45;&#45;             ROW_NUMBER() OVER(ORDER BY t1.total ASC) be_rank-->
+<!--            (@row_number:=@row_number + 1) AS be_rank-->
+<!--        FROM (-->
+
+<!--            select-->
+<!--                tube.user_id,-->
+<!--                SUM(tube.amount) amount,-->
+<!--                SUM(tube.credits) credits,-->
+<!--                SUM(tube.total) total,-->
+<!--                MAX(tube.create_time) create_time,-->
+<!--                MAX(tube.update_time) update_time-->
+<!--            from tt_user_blend_ercash tube-->
+<!--            <where>-->
+<!--                <if test="beginT != null and endT != null">-->
+<!--                    and tube.create_time between #{beginT} and #{endT}-->
+<!--                </if>-->
+<!--                <if test="sourceList.size > 0">-->
+<!--                    and tube.source in-->
+<!--                    <foreach collection="sourceList" item="sou" open="(" separator="," close=")">-->
+<!--                        #{sou}-->
+<!--                    </foreach>-->
+<!--                </if>-->
+<!--                and type = 0-->
+<!--            </where>-->
+<!--            GROUP BY tube.user_id-->
+
+<!--        ) t1-->
+<!--        left join tt_user tu on tu.user_id = t1.user_id-->
+<!--        LIMIT #{limit},#{size}-->
+        SELECT
+        t1.user_id,
+        t1.amount,
+        t1.credits,
+        t1.total,
+        t1.create_time,
+        t1.update_time,
+        (@row_number:=@row_number + 1) AS be_rank,
+        tu.nick_name,
+        tu.avatar
+        FROM (
+        SELECT
+        tube.user_id,
+        SUM(tube.amount) amount,
+        SUM(tube.credits) credits,
+        SUM(tube.total) total,
+        MAX(tube.create_time) create_time,
+        MAX(tube.update_time) update_time
+        FROM tt_user_blend_ercash tube
+        <where>
+            <if test="beginT != null and endT != null">
+                AND tube.create_time BETWEEN #{beginT} AND #{endT}
+            </if>
+            <if test="sourceList.size > 0">
+                AND tube.source IN
+                <foreach collection="sourceList" item="sou" open="(" separator="," close=")">
+                    #{sou}
+                </foreach>
+            </if>
+            AND type = 0
+        </where>
+        GROUP BY tube.user_id
+        ) t1
+        LEFT JOIN tt_user tu ON tu.user_id = t1.user_id
+        CROSS JOIN (SELECT @row_number := 0) AS rn
+        LIMIT #{limit}, #{size}
+    </select>
+
+<!--                    and total &lt;= 0-->
+
+    <select id="batchConsumeTotal" resultType="com.ruoyi.domain.vo.sys.SimpleTtUserVO">
+
+<!--        <include refid="r2"></include>-->
+
+        select
+            t1.nick_name,
+            t1.avatar,
+            t1.user_type,
+            t2.total as be_consume,
+            t2.credits as credits_consume,
+            t2.amount as amount_consume,
+            t3.recharge as recharge
+        from (
+            <include refid="l1"></include>
+        )t1
+        left join (
+            <include refid="r1"></include>
+        )t2 on t1.user_id = t2.user_id
+        left join (
+            <include refid="r2"></include>
+        )t3 on t1.user_id = t3.user_id
+        <if test="orderByFie == null or orderByFie == 2">order by total</if>
+        <if test="orderByFie == 3">order by amount</if>
+        <if test="orderByFie == 4">order by credits</if>
+        <if test="orderByType == null or orderByType == 2">desc</if>
+        <if test="orderByType == 1">asc</if>
+        limit #{limit},#{size}
+
+    </select>
+
+    <select id="userAccountDetail" resultType="com.ruoyi.domain.vo.TtUserAmountRecords.UserAmountDetailVO">
+        SELECT
+        tube.id,
+        tube.user_id,
+        tube.type,
+        tube.source,
+        tube.amount,
+        tube.credits,
+        tube.final_amount,
+        tube.create_time,
+        tube.remark
+        FROM tt_user_blend_ercash tube
+        LEFT JOIN tt_user tu ON tu.user_id = tube.user_id
+        <where>
+            <if test="userId != null">AND tube.user_id = #{userId}</if>
+            <if test="nickName != null">AND tu.nick_name LIKE CONCAT('%',#{nickName},'%')</if>
+            <if test="phoneNumber != null">AND tu.phone_number = #{phoneNumber}</if>
+            <if test="type != null">AND tube.type = #{type}</if>
+            <if test="source != null">AND tube.source = #{source}</if>
+            <if test="moneyType == 1">
+                AND tube.amount is not null
+                AND tube.amount != 0
+            </if>
+            <if test="moneyType == 2">
+                AND tube.credits is not null
+                AND tube.credits != 0
+            </if>
+        </where>
+        ORDER BY tube.create_time DESC
+        limit #{limit},#{size}
+    </select>
+
+    <select id="byCondition" resultType="com.ruoyi.domain.vo.TtUserAmountRecords.TtUserBlendErcashVO">
+        select
+            *
+        from
+            tt_user_blend_ercash
+        <where>
+
+            <if test="userId != null">
+                and user_id = #{userId}
+            </if>
+
+            <if test="source != null">
+                and source = #{source}
+            </if>
+
+            <if test="type != null">
+                and `type` = #{type}
+            </if>
+
+            <if test="moneyType == 1">
+                and amount != 0
+                and amount is not null
+            </if>
+
+            <if test="moneyType == 2">
+                and credits != 0
+                and credits is not null
+            </if>
+        </where>
+        order by id desc
+        limit #{limit},#{size}
+    </select>
+
+    <select id="count" resultType="java.lang.Integer">
+        select
+            count(1)
+        from
+        tt_user_blend_ercash
+        <where>
+
+            <if test="userId != null">
+                and user_id = #{userId}
+            </if>
+
+            <if test="source != null">
+                and source = #{source}
+            </if>
+
+            <if test="type != null">
+                and type = #{type}
+            </if>
+
+            <if test="moneyType == 1">
+                and amount != 0
+                and amount is not null
+            </if>
+
+            <if test="moneyType == 2">
+                and credits != 0
+                and credits is not null
+            </if>
+        </where>
+    </select>
+    <select id="personTotalConsumeByTime"
+            resultType="com.ruoyi.domain.vo.TtUserAmountRecords.PersonBlendErcashVO">
+        select
+            user_id as user_id,
+            sum(amount) as amount,
+            sum(credits) as credits,
+            sum(total) as total
+        from
+            tt_user_blend_ercash
+        where
+            user_id = #{userId}
+        and
+            type = #{type}
+        and
+            create_time between #{beginT} and #{endT}
+    </select>
+
+    <select id="personsTotalConsumeByTime"
+            resultType="com.ruoyi.domain.vo.TtUserAmountRecords.PersonBlendErcashVO">
+
+        select
+            max(user_id) as user_id,
+            sum(amount) as amount,
+            sum(credits) as credits,
+            sum(total) as total
+        from
+            tt_user_blend_ercash
+        <where>
+            <if test="userIds.size > 0">
+                user_id in
+                <foreach collection="userIds" item="uid" open="(" separator="," close=")">
+                    #{uid}
+                </foreach>
+            </if>
+            and type = #{type}
+            and source in (2 ,4 ,8)
+            and create_time between #{beginT} and #{endT}
+        </where>
+        group by user_id
+
+    </select>
+    <select id="calcPlayTotalByTimeScope" resultType="com.ruoyi.domain.dto.promo.UserPlayInfoDTO">
+        SELECT
+            o1.user_id,
+            o1.total_amount,
+            t1.commission_rate
+        FROM
+            (
+                SELECT
+                    t1.parent_id AS user_id,
+                    ROUND( SUM( abs( IFNULL( t2.amount, 0 )) + abs( IFNULL( t2.credits, 0 ))), 2 ) AS total_amount
+                FROM
+                    ( SELECT parent_id, user_id, commission_rate FROM tt_user WHERE parent_id > 0 ) t1
+                        LEFT JOIN
+                    ( SELECT user_id, amount, credits
+                      FROM tt_user_blend_ercash
+                      WHERE type = 0 AND `source` IN ( 2, 4, 8 )
+                        AND create_time BETWEEN #{beginTime} AND #{endTime} ) t2 ON t1.user_id = t2.user_id
+                GROUP BY
+                    t1.parent_id
+            ) o1
+                JOIN tt_user t1 ON o1.user_id = t1.user_id
+    </select>
+
+    <!--  这里没有返回主播的佣金率，到方法外再查询  -->
+    <select id="calcPlayTotalByTimeScopeAndUser" resultType="com.ruoyi.domain.dto.promo.UserPlayInfoDTO">
+        SELECT
+            t1.parent_id as user_id,
+            ROUND(SUM(abs(IFNULL( t2.amount, 0 )) + abs(IFNULL( t2.credits, 0 ))), 2) AS total_amount
+        FROM
+            ( SELECT parent_id, user_id FROM tt_user WHERE parent_id = #{userId}) t1
+                LEFT JOIN
+            ( SELECT user_id, amount, credits FROM tt_user_blend_ercash
+              WHERE type = 0
+                AND `source` IN ( 2, 4, 8 )
+                AND create_time BETWEEN #{beginTime} AND #{endTime} ) t2
+            ON t1.user_id = t2.user_id
+        GROUP BY
+            t1.parent_id
+    </select>
+    <select id="teamDetailsList" resultType="com.ruoyi.domain.vo.TeamDetailSimpleVO">
+        SELECT
+            ou.user_id,
+            ou.nick_name,
+            IFNULL(o1.recharge, 0) as recharge,
+            IFNULL(o2.beConsume, 0) as beConsume
+        FROM
+            (SELECT user_id, nick_name from tt_user WHERE parent_id = #{parentId} ORDER BY user_id LIMIT #{pageNum}, #{pageSize} ) ou
+                LEFT JOIN
+            (SELECT
+                 user_id,
+                 ROUND( SUM( abs( IFNULL( t2.amount, 0 )) + abs( IFNULL( t2.credits, 0 ))), 2 ) AS recharge
+             FROM
+                 tt_user_blend_ercash t2
+             WHERE
+                 create_time BETWEEN #{beginTime} AND #{endTime}
+               AND user_id in (select user_id from tt_user where parent_id = #{parentId})
+               AND type = 1
+               AND source = 1
+             GROUP BY
+                 user_id ) o1 on ou.user_id = o1.user_id
+                LEFT JOIN
+            (SELECT
+                 user_id,
+                 ROUND( SUM( abs( IFNULL( amount, 0 )) + abs( IFNULL( credits, 0 ))), 2 ) AS beConsume
+             FROM
+                 tt_user_blend_ercash
+             WHERE
+                 create_time BETWEEN #{beginTime} AND #{endTime}
+               AND user_id in (select user_id from tt_user where parent_id = #{parentId})
+               AND type = 0
+               AND source in (2, 4, 8)
+             GROUP BY
+                 user_id ) o2 on ou.user_id = o2.user_id
+    </select>
+
+
+    <select id="getAnchorCount" parameterType="Long" resultType="int">
+        SELECT COUNT(*) FROM tt_user WHERE parent_id = #{userId}
+    </select>
+
+    <select id="getTotalCharge" resultType="java.math.BigDecimal">
+        SELECT
+            ROUND( SUM( abs( IFNULL( t2.amount, 0 )) + abs( IFNULL( t2.credits, 0 ))), 2 ) AS recharge
+        FROM
+            tt_user_blend_ercash t2
+        WHERE
+            user_id in (select user_id from tt_user where parent_id = #{userId})
+          AND type = 1
+          AND source = 1
+    </select>
+
+    <select id="getTotalConsume" resultType="java.math.BigDecimal">
+        SELECT
+            ROUND( SUM( abs( IFNULL( amount, 0 )) + abs( IFNULL( credits, 0 ))), 2 ) AS beConsume
+        FROM
+            tt_user_blend_ercash
+        WHERE
+            user_id in (select user_id from tt_user where parent_id = #{userId})
+          AND type = 0
+          AND source in (2, 4, 8)
+    </select>
+
+    <select id="getTodayConsume" resultType="java.math.BigDecimal">
+        SELECT
+            ROUND( SUM( abs( IFNULL( t2.amount, 0 )) + abs( IFNULL( t2.credits, 0 ))), 2 ) AS recharge
+        FROM
+            tt_user_blend_ercash t2
+        WHERE
+            create_time > DATE(NOW())
+          AND user_id in (select user_id from tt_user where parent_id = #{userId})
+          AND type = 0
+          AND source in (2, 4, 8)
+    </select>
+
+    <sql id="l1">
+        select
+            user_id,
+            nick_name,
+            avatar,
+            user_type
+        from tt_user ttu
+        <where>
+            <if test="userIdList.size > 0">
+                ttu.user_id in
+                <foreach collection="userIdList" item="uid" open="(" separator="," close=")">
+                    #{uid}
+                </foreach>
+            </if>
+
+            <if test="userIdList.size &lt;= 0">
+                ttu.user_id = -1
+            </if>
+        </where>
+    </sql>
+
+    <sql id="r1">
+
+        <!--右1 补充消费信息-->
+        select
+            any_value(tube.user_id) as user_id,
+            sum(tube.total) as total,
+            sum(tube.credits) as credits,
+            sum(tube.amount) as amount
+        from tt_user_blend_ercash tube
+        left join tt_user ttu on ttu.user_id = tube.user_id
+        <where>
+            <if test="userIdList.size > 0">
+                tube.user_id in
+                <foreach collection="userIdList" item="uid" open="(" separator="," close=")">
+                    #{uid}
+                </foreach>
+            </if>
+            <if test="beginTime != null and endTime != null">
+                and tube.create_time between #{beginTime} and #{endTime}
+            </if>
+            and type = 0
+        </where>
+        group by user_id
+    </sql>
+
+    <sql id="r2">
+        <!--右2 补充充值信息-->
+        select
+            any_value(tto.user_id) as user_id,
+            sum(tto.total_amount) as recharge
+        from tt_order tto
+        left join tt_user ttu on tto.user_id = ttu.user_id
+        <where>
+            <if test="userIdList.size > 0">
+                tto.user_id in
+                <foreach collection="userIdList" item="uid" open="(" separator="," close=")">
+                    #{uid}
+                </foreach>
+            </if>
+
+            <if test="beginTime != null and endTime != null">
+                and tto.create_time between #{beginTime} and #{endTime}
+            </if>
+            and tto.status = 4
+        </where>
+        group by user_id
+    </sql>
+
+
+
+
+
+</mapper>

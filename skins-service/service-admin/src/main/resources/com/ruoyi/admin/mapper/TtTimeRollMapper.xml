@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtTimeRollMapper">
+
+    <select id="getRollJackpotOrnamentsList" resultType="com.ruoyi.domain.vo.TtRollPrizeDataVO">
+        SELECT ttr.id   AS rollId,
+               trjo.id AS jackpotOrnamentsListId,
+               trjo.ornaments_id,
+               trjo.ornaments_num,
+               trjo.ornaments_level_id,
+               tto.name,
+               tto.short_name,
+               tto.use_price,
+               tto.image_url
+        FROM tt_time_roll ttr
+                 LEFT JOIN tt_roll_jackpot_ornaments trjo ON ttr.jackpot_id = trjo.jackpot_id
+                 LEFT JOIN tt_ornament tto ON trjo.ornaments_id = tto.id
+        WHERE ttr.id = #{id}
+    </select>
+
+    <select id="getSpecifiedTimeRollJackpotOrnamentsList" resultType="com.ruoyi.domain.vo.TtRollPrizeDataVO">
+        SELECT ttru.id                   AS rollUserId,
+               ttru.time_roll_id AS rollId,
+               ttru.user_id,
+               tu.nick_name,
+               ttru.designated_by,
+               ttru.jackpot_ornaments_id AS jackpotOrnamentsListId,
+               ttru.ornaments_id,
+               trjo.ornaments_level_id,
+               tto.name,
+               tto.short_name,
+               tto.use_price,
+               tto.image_url
+        FROM tt_time_roll_user ttru
+                 LEFT JOIN tt_roll_jackpot_ornaments trjo ON trjo.id = ttru.jackpot_ornaments_id
+                 LEFT JOIN tt_ornament tto ON trjo.ornaments_id = tto.id
+                 LEFT JOIN tt_user tu ON ttru.user_id = tu.user_id
+        WHERE ttru.time_roll_id = #{id} AND ttru.end_status = '0'
+    </select>
+</mapper>

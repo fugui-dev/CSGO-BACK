@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.playingmethod.mapper.ApiWelfareMapper">
+
+  <resultMap id="apiWelfareResultMap" type="com.ruoyi.playingmethod.model.ApiWelfare">
+    <id property="welfareId" column="welfare_id"/>
+    <result property="welfareName" column="welfare_name"/>
+    <result property="type" column="type"/>
+    <result property="vipLevel" column="vip_level"/>
+    <result property="eligible" column="eligible"/>
+    <result property="claimStatus" column="claim_status"/>
+    <result property="rechargeThreshold" column="recharge_threshold"/>
+    <association property="ttBox" resultMap="ttBoxResultMap"/>
+  </resultMap>
+
+  <resultMap id="ttBoxResultMap" type="com.ruoyi.domain.other.TtBox" autoMapping="true"/>
+
+  <select id="getWelfareList" parameterType="Long" resultMap="apiWelfareResultMap">
+    SELECT
+      tw.welfare_id, tw.welfare_name, tw.type, tw.vip_level,
+      -- 宝箱
+      tb.*
+    FROM
+      tt_welfare AS tw
+        LEFT JOIN
+      tt_box AS tb ON tw.box_id = tb.box_id
+  </select>
+
+  <select id="checkClaimed" resultType="boolean">
+    SELECT
+      CASE
+        WHEN EXISTS(
+            SELECT 1
+            FROM tt_welfare_record
+            WHERE welfare_id = #{welfareId} AND user_id = #{userId}
+          ) THEN true ELSE false
+        END AS result
+  </select>
+
+  <select id="getBoxIdByWelfareId" parameterType="Integer" resultType="Integer">
+    SELECT box_id FROM tt_welfare WHERE welfare_id = #{welfareId}
+  </select>
+
+  <insert id="saveClaimWelfareRecord" parameterType="com.ruoyi.playingmethod.model.ApiWelfareRecord">
+    INSERT INTO tt_welfare_record(welfare_id, user_id, create_time)
+    VALUES (#{welfareId}, #{userId}, #{createTime})
+  </insert>
+</mapper>

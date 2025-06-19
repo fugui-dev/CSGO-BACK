@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtFirstRechargeMapper">
+
+  <resultMap type="TtFirstRecharge" id="TtFirstRechargeResult">
+    <result property="id"    column="id"    />
+    <result property="minAmount"    column="min_amount"    />
+    <result property="ratio"    column="ratio"    />
+    <result property="description"    column="description"    />
+    <result property="createBy"    column="create_by"    />
+    <result property="createTime"    column="create_time"    />
+    <result property="updateBy"    column="update_by"    />
+    <result property="updateTime"    column="update_time"    />
+  </resultMap>
+
+  <sql id="selectTtFirstRechargeVo">
+    select id, min_amount, ratio, description, create_by, create_time, update_by, update_time from tt_first_recharge
+  </sql>
+
+  <select id="selectTtFirstRechargeList" parameterType="TtFirstRecharge" resultMap="TtFirstRechargeResult">
+    <include refid="selectTtFirstRechargeVo"/>
+    <where>
+      <if test="minAmount != null "> and min_amount = #{minAmount}</if>
+      <if test="ratio != null "> and ratio = #{ratio}</if>
+      <if test="description != null  and description != ''"> and description = #{description}</if>
+    </where>
+  </select>
+
+  <select id="selectTtFirstRechargeById" parameterType="Integer" resultMap="TtFirstRechargeResult">
+    <include refid="selectTtFirstRechargeVo"/>
+    where id = #{id}
+  </select>
+
+  <insert id="insertTtFirstRecharge" parameterType="TtFirstRecharge">
+    insert into tt_first_recharge
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">id,</if>
+      <if test="minAmount != null">min_amount,</if>
+      <if test="ratio != null">ratio,</if>
+      <if test="description != null">description,</if>
+      <if test="createBy != null">create_by,</if>
+      <if test="createTime != null">create_time,</if>
+      <if test="updateBy != null">update_by,</if>
+      <if test="updateTime != null">update_time,</if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">#{id},</if>
+      <if test="minAmount != null">#{minAmount},</if>
+      <if test="ratio != null">#{ratio},</if>
+      <if test="description != null">#{description},</if>
+      <if test="createBy != null">#{createBy},</if>
+      <if test="createTime != null">#{createTime},</if>
+      <if test="updateBy != null">#{updateBy},</if>
+      <if test="updateTime != null">#{updateTime},</if>
+    </trim>
+  </insert>
+
+  <update id="updateTtFirstRecharge" parameterType="TtFirstRecharge">
+    update tt_first_recharge
+    <trim prefix="SET" suffixOverrides=",">
+      <if test="minAmount != null">min_amount = #{minAmount},</if>
+      <if test="ratio != null">ratio = #{ratio},</if>
+      <if test="description != null">description = #{description},</if>
+      <if test="createBy != null">create_by = #{createBy},</if>
+      <if test="createTime != null">create_time = #{createTime},</if>
+      <if test="updateBy != null">update_by = #{updateBy},</if>
+      <if test="updateTime != null">update_time = #{updateTime},</if>
+    </trim>
+    where id = #{id}
+  </update>
+
+  <delete id="deleteTtFirstRechargeById" parameterType="Integer">
+    delete from tt_first_recharge where id = #{id}
+  </delete>
+
+  <delete id="deleteTtFirstRechargeByIds" parameterType="String">
+    delete from tt_first_recharge where id in
+    <foreach item="id" collection="array" open="(" separator="," close=")">
+      #{id}
+    </foreach>
+  </delete>
+
+  <select id="selectRatioByMinAmount" parameterType="java.math.BigDecimal" resultType="java.math.BigDecimal">
+    SELECT
+      ratio
+    FROM
+      tt_first_recharge
+    WHERE
+      min_amount &lt;= #{minAmount}
+    ORDER BY
+      min_amount DESC
+    LIMIT 1
+  </select>
+</mapper>

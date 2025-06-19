@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.playingmethod.mapper.ApiReplacementRecordMapper">
+
+    <resultMap type="com.ruoyi.domain.other.TtReplacementRecord" id="TtReplacementRecordResult">
+        <result property="id" column="id"/>
+        <result property="uid" column="uid"/>
+        <result property="uname" column="uname"/>
+        <result property="oids" column="oids"/>
+        <result property="awardOid" column="award_oid"/>
+        <result property="awardOname" column="award_oname"/>
+        <result property="awardOprice" column="award_oprice"/>
+        <result property="awardOimg" column="award_oimg"/>
+        <result property="time" column="time"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <resultMap type="com.ruoyi.domain.entity.TtOrnament" id="ApiOrnamentsResult">
+        <result property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="usePrice" column="use_price"/>
+        <result property="imageUrl" column="image_url"/>
+        <result property="marketHashName" column="market_hash_name"/>
+        <result property="price" column="price"/>
+        <result property="quantity" column="quantity"/>
+        <result property="shortName" column="short_name"/>
+        <result property="type" column="type"/>
+        <result property="typeName" column="type_name"/>
+        <result property="quality" column="quality"/>
+        <result property="qualityName" column="quality_name"/>
+        <result property="qualityColor" column="quality_color"/>
+        <result property="rarity" column="rarity"/>
+        <result property="rarityName" column="rarity_name"/>
+        <result property="rarityColor" column="rarity_color"/>
+        <result property="exterior" column="exterior"/>
+        <result property="exteriorName" column="exterior_name"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+        <result property="isPutaway" column="is_putaway"/>
+        <result property="isProprietaryProperty" column="is_proprietary_property"/>
+        <result property="zbtId" column="zbt_id"/>
+        <result property="yyyoupingId" column="yyyouping_id"/>
+        <result property="typeHashName" column="type_hash_name"/>
+        <result property="exteriorHashName" column="exterior_hash_name"/>
+        <result property="qualityHashName" column="quality_hash_name"/>
+        <result property="rarityHashName" column="rarity_hash_name"/>
+    </resultMap>
+
+    <sql id="selectTtReplacementRecordVo">
+        select id, uid, uname, oids, award_oid, award_oname, award_oprice,award_oimg, time, create_time, update_time
+        from tt_replacement_record
+    </sql>
+
+    <insert id="insertTtReplacementRecord" parameterType="com.ruoyi.domain.other.TtReplacementRecord" useGeneratedKeys="true" keyProperty="id">
+        insert into tt_replacement_record
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="uid != null">uid,</if>
+            <if test="uname != null">uname,</if>
+            <if test="oids != null">oids,</if>
+            <if test="awardOid != null">award_oid,</if>
+            <if test="awardOname != null">award_oname,</if>
+            <if test="awardOprice != null">award_oprice,</if>
+            <if test="awardOimg != null">award_oimg,</if>
+            <if test="time != null">time,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="uid != null">#{uid},</if>
+            <if test="uname != null">#{uname},</if>
+            <if test="oids != null">#{oids},</if>
+            <if test="awardOid != null">#{awardOid},</if>
+            <if test="awardOname != null">#{awardOname},</if>
+            <if test="awardOprice != null">#{awardOprice},</if>
+            <if test="awardOimg != null">#{awardOimg},</if>
+            <if test="time != null">#{time},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+        </trim>
+    </insert>
+
+    <sql id="selectTtOrnamentsVo">
+        select
+               id,
+            `name`,
+            use_price,
+            image_url,
+            market_hash_name,
+            item_id,
+            price,
+            quantity,
+            short_name,
+            `type`,
+            type_name,
+            quality,
+            quality_name,
+            quality_color,
+            rarity,
+            rarity_name,
+            rarity_color,
+            exterior,
+            exterior_name,
+            create_time,
+            update_time,
+            remark,
+            is_putaway,
+            is_proprietary_property,
+            zbt_id,
+            yyyouping_id,
+            type_hash_name,
+            exterior_hash_name,
+            quality_hash_name,
+            rarity_hash_name
+        from tt_ornament
+    </sql>
+
+    <select id="findByPriceRange" resultMap="ApiOrnamentsResult" parameterType="map">
+        <include refid="selectTtOrnamentsVo"/>
+        WHERE use_price &gt;= #{start, javaType=java.math.BigDecimal}
+        AND use_price &lt;= #{end, javaType=java.math.BigDecimal}
+    </select>
+
+    <select id="selectUserPackSack" resultType="com.ruoyi.domain.vo.UserPackSackDataVO">
+        SELECT
+            tbr.id,
+            tbr.ornament_id,
+            tbr.ornaments_price,
+            tto.name,
+            tto.short_name,
+            tto.image_url,
+            tto.exterior_name,
+            tbr.ornaments_level_id,
+            tol.level_img
+        FROM
+            tt_box_records tbr
+                LEFT JOIN
+            tt_ornament tto ON tbr.ornament_id = tto.id
+                LEFT JOIN
+            tt_ornaments_level tol ON tbr.ornaments_level_id = tol.id
+        WHERE
+            tbr.holder_user_id = #{userId}
+            AND tbr.status = 0
+            AND tbr.id IN
+            <foreach collection="itemIds" item="id" open="(" separator="," close=")">
+                #{id}
+            </foreach>
+    </select>
+
+
+</mapper>

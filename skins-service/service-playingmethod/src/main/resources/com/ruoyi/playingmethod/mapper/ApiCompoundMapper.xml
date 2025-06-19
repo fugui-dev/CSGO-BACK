@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.playingmethod.mapper.ApiCompoundMapper">
+
+    <select id="selectCompoundDataById" resultType="com.ruoyi.domain.vo.UserPackSackDataVO">
+        SELECT tbr.id,
+               tbr.ornaments_id,
+               tbr.ornaments_price,
+               tto.name,
+               tto.short_name,
+               tto.image_url,
+               tto.exterior_name,
+               tbr.ornaments_level_id,
+               tol.level_img
+        FROM tt_box_records tbr
+                 LEFT JOIN tt_ornament tto ON tbr.ornaments_id = tto.id
+                 LEFT JOIN tt_ornaments_level tol ON tbr.ornaments_level_id = tol.id
+        WHERE tbr.id = #{packSackId}
+    </select>
+
+    <select id="selectCompoundRecordByUserId" resultType="com.ruoyi.domain.vo.UserPackSackDataVO">
+        SELECT tbr.id,
+               tbr.ornaments_id,
+               tbr.ornaments_price,
+               tto.name,
+               tto.short_name,
+               tto.image_url,
+               tto.exterior_name,
+               tbr.ornaments_level_id,
+               tol.level_img
+        FROM tt_box_records tbr
+                 LEFT JOIN tt_ornament tto ON tbr.ornaments_id = tto.id
+                 LEFT JOIN tt_ornaments_level tol ON tbr.ornaments_level_id = tol.id
+        WHERE tbr.user_id = #{userId}
+          AND tbr.source = '3'
+        order by tbr.create_time DESC
+    </select>
+
+</mapper>

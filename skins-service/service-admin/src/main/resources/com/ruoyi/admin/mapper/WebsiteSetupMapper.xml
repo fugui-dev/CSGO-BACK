@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.WebsiteSetupMapper">
+
+    <select id="getOperationalStatistics" resultType="com.ruoyi.domain.other.OperationalStatistics">
+        <![CDATA[
+        SELECT
+            o1.date,
+            o1.rechargePriceTotal,
+            COALESCE (o2.deliveryPriceTotal, 0) as deliveryPriceTotal,
+            COALESCE(o1.rechargePriceTotal, 0) - COALESCE (o2.deliveryPriceTotal, 0) as profit
+        from
+            (
+                SELECT
+                    DATE (d.date) AS `date`,
+            COALESCE (SUM(t1.amount_actually_paid), 0) AS rechargePriceTotal
+            FROM (
+            SELECT CURDATE() - INTERVAL a.a DAY AS date
+            FROM (
+            SELECT 0 AS a UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
+            UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9
+            UNION ALL SELECT 10 UNION ALL SELECT 11 UNION ALL SELECT 12 UNION ALL SELECT 13 UNION ALL SELECT 14
+            UNION ALL SELECT 15 UNION ALL SELECT 16 UNION ALL SELECT 17 UNION ALL SELECT 18 UNION ALL SELECT 19
+            UNION ALL SELECT 20 UNION ALL SELECT 21 UNION ALL SELECT 22 UNION ALL SELECT 23 UNION ALL SELECT 24
+            UNION ALL SELECT 25 UNION ALL SELECT 26 UNION ALL SELECT 27 UNION ALL SELECT 28 UNION ALL SELECT 29
+            UNION ALL SELECT 30
+            ) AS a
+            ) d
+            LEFT JOIN tt_recharge_record t1
+        ON DATE (d.date) = DATE (t1.create_time) AND t1.create_time >= CURDATE() - INTERVAL 30 DAY
+        AND anchor_virtual = 0
+        GROUP BY DATE (d.date)
+        ORDER BY DATE (d.date) ASC
+            ) o1
+            LEFT JOIN (
+        SELECT
+            DATE( create_time ) AS create_time_day,
+            COALESCE (SUM( buy_price ), 0) AS deliveryPriceTotal
+        FROM
+            tt_delivery_record
+        WHERE
+            create_time >= CURDATE() - INTERVAL 30 DAY
+          AND delivery IN ( 1, 2 )
+          AND `status` = 10
+        GROUP BY
+            DATE( create_time )
+            ) o2 ON o1.date = o2.create_time_day
+        ]]>
+    </select>
+
+    <select id="selectParameterSettingList" resultType="com.ruoyi.domain.other.ConfigData">
+        SELECT config_id,
+               config_name,
+               config_key,
+               config_value,
+               config_type,
+               create_by,
+               create_time,
+               update_by,
+               update_time,
+               remark
+        FROM sys_config
+        WHERE config_id >= 100
+    </select>
+
+    <delete id="truncateSysJobLog" statementType="PREPARED">
+        TRUNCATE TABLE sys_job_log;
+    </delete>
+    <delete id="truncateSysLogininfor" statementType="PREPARED">
+        TRUNCATE TABLE sys_logininfor;
+    </delete>
+    <delete id="truncateSysOperLog" statementType="PREPARED">
+        TRUNCATE TABLE sys_oper_log;
+    </delete>
+    <delete id="truncateTtBoxRecords" statementType="PREPARED">
+        TRUNCATE TABLE tt_box_records;
+    </delete>
+    <delete id="truncateTtFight" statementType="PREPARED">
+        TRUNCATE TABLE tt_fight;
+    </delete>
+    <delete id="truncateTtFightResult" statementType="PREPARED">
+        TRUNCATE TABLE tt_fight_result;
+    </delete>
+    <delete id="truncateTtFightUser" statementType="PREPARED">
+        TRUNCATE TABLE tt_fight_user;
+    </delete>
+    <delete id="truncateTtVipLevel" statementType="PREPARED">
+        TRUNCATE TABLE tt_vip_level;
+    </delete>
+    <delete id="truncateTtPromotionLevel" statementType="PREPARED">
+        TRUNCATE TABLE tt_promotion_level;
+    </delete>
+    <delete id="truncateTtOrnamentsLevel" statementType="PREPARED">
+        TRUNCATE TABLE tt_ornaments_level;
+    </delete>
+
+</mapper>

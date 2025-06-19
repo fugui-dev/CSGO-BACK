@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtPayConfigMapper">
+
+    <resultMap type="com.ruoyi.domain.entity.TtPayConfig" id="TtPayConfigResult">
+        <result property="id"    column="id"    />
+        <result property="payName"    column="pay_name"    />
+        <result property="payTag"    column="pay_tag"    />
+        <result property="payType"    column="pay_type"    />
+        <result property="payMinMoney"    column="pay_min_money"    />
+        <result property="payMaxMoney"    column="pay_max_money"    />
+        <result property="userTotalMinMoney"    column="user_total_min_money"    />
+        <result property="sort"    column="sort"    />
+        <result property="status"    column="status"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectTtPayConfigVo">
+        select id, pay_name, pay_tag, pay_type, pay_min_money, pay_max_money, user_total_min_money, sort, status, update_time from tt_pay_config
+    </sql>
+
+    <select id="selectTtPayConfigList" parameterType="TtPayConfig" resultMap="TtPayConfigResult">
+        <include refid="selectTtPayConfigVo"/>
+        <where>
+            <if test="payName != null  and payName != ''"> and pay_name like concat('%', #{payName}, '%')</if>
+            <if test="payTag != null  and payTag != ''"> and pay_tag = #{payTag}</if>
+            <if test="payType != null "> and pay_type = #{payType}</if>
+            <if test="payMinMoney != null "> and pay_min_money = #{payMinMoney}</if>
+            <if test="payMaxMoney != null "> and pay_max_money = #{payMaxMoney}</if>
+            <if test="userTotalMinMoney != null "> and user_total_min_money &lt;= #{userTotalMinMoney}</if>
+            <if test="sort != null "> and sort = #{sort}</if>
+            <if test="status != null "> and status = #{status}</if>
+        </where>
+        order by sort
+    </select>
+
+    <select id="selectTtPayConfigById" parameterType="Long" resultMap="TtPayConfigResult">
+        <include refid="selectTtPayConfigVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertTtPayConfig" parameterType="TtPayConfig" useGeneratedKeys="true" keyProperty="id">
+        insert into tt_pay_config
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="payName != null">pay_name,</if>
+            <if test="payTag != null">pay_tag,</if>
+            <if test="payType != null">pay_type,</if>
+            <if test="payMinMoney != null">pay_min_money,</if>
+            <if test="payMaxMoney != null">pay_max_money,</if>
+            <if test="userTotalMinMoney != null">user_total_min_money,</if>
+            <if test="sort != null">sort,</if>
+            <if test="status != null">status,</if>
+            <if test="updateTime != null">update_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="payName != null">#{payName},</if>
+            <if test="payTag != null">#{payTag},</if>
+            <if test="payType != null">#{payType},</if>
+            <if test="payMinMoney != null">#{payMinMoney},</if>
+            <if test="payMaxMoney != null">#{payMaxMoney},</if>
+            <if test="userTotalMinMoney != null">#{userTotalMinMoney},</if>
+            <if test="sort != null">#{sort},</if>
+            <if test="status != null">#{status},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateTtPayConfig" parameterType="TtPayConfig">
+        update tt_pay_config
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="payName != null">pay_name = #{payName},</if>
+            <if test="payTag != null">pay_tag = #{payTag},</if>
+            <if test="payType != null">pay_type = #{payType},</if>
+            <if test="payMinMoney != null">pay_min_money = #{payMinMoney},</if>
+            <if test="payMaxMoney != null">pay_max_money = #{payMaxMoney},</if>
+            <if test="userTotalMinMoney != null">user_total_min_money = #{userTotalMinMoney},</if>
+            <if test="sort != null">sort = #{sort},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTtPayConfigById" parameterType="Long">
+        delete from tt_pay_config where id = #{id}
+    </delete>
+
+    <delete id="deleteTtPayConfigByIds" parameterType="String">
+        delete from tt_pay_config where id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

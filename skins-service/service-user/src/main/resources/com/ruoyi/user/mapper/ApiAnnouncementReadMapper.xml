@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.user.mapper.ApiAnnouncementReadMapper">
+
+    <select id="countAnnouncementRead" resultType="int">
+        SELECT COUNT(*) FROM tt_announcement_read WHERE announcement_id = #{announcementId} AND user_id = #{userId}
+    </select>
+
+    <insert id="addAnnouncementRead">
+        INSERT INTO tt_announcement_read(announcement_id, user_id) VALUES (#{announcementId}, #{userId})
+    </insert>
+</mapper>

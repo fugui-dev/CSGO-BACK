@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtOrnamentMapper">
+
+    <select id="simpleOrnamentInfo" resultType="com.ruoyi.domain.vo.upgrade.SimpleOrnamentVO">
+        select
+            tto.id as ornament_id,
+            tto.name as ornament_name,
+            tto.use_price as ornament_price,
+            tto.image_url as ornament_img_url,
+            tto.market_hash_name as ornament_hash_name,
+            tol.level as ornament_level,
+            tol.level_img as ornament_level_img
+        from
+            tt_upgrade_ornaments tuo
+        left join tt_ornament tto on tto.id = tuo.ornaments_id
+        left join tt_ornaments_level tol on tol.id = tuo.ornaments_level_id
+        where tto.id in
+        <foreach collection="idList" item="ornId" index="index" open="(" close=")" separator=",">
+            #{ornId}
+        </foreach>
+    </select>
+
+    <select id="byCondition" resultType="com.ruoyi.domain.vo.upgrade.SimpleOrnamentVO">
+        select
+            id as ornamentId,
+            name as ornamentName,
+            use_price as ornamentPrice,
+            image_url as ornamentImgUrl,
+            create_time,
+            update_time,
+            type,
+            type_name
+        from
+            tt_ornament
+        <where>
+            <if test="id != null">
+                and id = #{id}
+            </if>
+            <if test="type != null and type != ''">
+                and type = #{type}
+            </if>
+            <if test="name != null and name != ''">
+                and name like concat('%',#{name},'%')
+            </if>
+            <if test="minPrice != null">
+                and use_price &gt; #{minPrice}
+            </if>
+            <if test="maxPrice != null">
+                and use_price &lt; #{maxPrice}
+            </if>
+            and is_putaway = 1
+            and is_proprietary_property = 0
+        </where>
+        order by use_price desc
+    </select>
+
+    <select id="byCondition2" resultType="com.ruoyi.domain.vo.upgrade.SimpleOrnamentVO">
+        select
+            id as ornamentId,
+            name as ornamentName,
+            use_price as ornamentPrice,
+            image_url as ornamentImgUrl,
+            create_time,
+            update_time,
+            type,
+            type_name
+        from
+            tt_ornament
+        <where>
+            <if test="id != null">
+                and id = #{id}
+            </if>
+            <if test="type != null and type != ''">
+                and type = #{type}
+            </if>
+            <if test="name != null and name != ''">
+                and name like concat('%',#{name},'%')
+            </if>
+            <if test="minPrice != null">
+                and use_price &gt; #{minPrice}
+            </if>
+            <if test="maxPrice != null">
+                and use_price &lt; #{maxPrice}
+            </if>
+            and is_putaway = 0
+            and is_proprietary_property = 1
+            and use_price > 0
+        </where>
+        order by use_price desc
+    </select>
+
+    <select id="countByCondition" resultType="java.lang.Integer">
+        select
+            count(id)
+        from
+            tt_ornament
+        <where>
+            <if test="id != null">
+                and id = #{id}
+            </if>
+            <if test="isProprietaryProperty != null">
+                and is_proprietary_property = #{isProprietaryProperty}
+            </if>
+            <if test="name != null and name != ''">
+                and name like concat('%',#{isProprietaryProperty},'%')
+            </if>
+            <if test="minPrice != null">
+                and use_price &gt; #{minPrice}
+            </if>
+            <if test="maxPrice != null">
+                and use_price &lt; #{maxPrice}
+            </if>
+            and is_putaway = 1
+        </where>
+    </select>
+
+    <select id="selectOrnamentsIdList" resultType="Long">
+        SELECT id FROM tt_ornament
+    </select>
+
+    <select id="selectOrnamentsMarketHashNameList" resultType="String">
+        SELECT market_hash_name FROM tt_ornament
+    </select>
+
+    <update id="updateWebsiteProperty" parameterType="com.ruoyi.domain.vo.WebsitePropertyDataVO">
+        update tt_ornament
+        <set>
+            <if test="name != null and name != ''">name = #{name},</if>
+            <if test="name != null and name != ''">short_name = #{name},</if>
+            <if test="usePrice != null and usePrice != ''">use_price = #{usePrice},</if>
+            <if test="imageUrl != null and imageUrl != ''">image_url = #{imageUrl},</if>
+            <if test="type != null and type != ''">type = #{type},</if>
+            <if test="typeName != null and typeName != ''">type_name = #{typeName},</if>
+            update_time = sysdate()
+        </set>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteWebsitePropertyByIds" parameterType="Long">
+        DELETE FROM tt_ornament WHERE id IN
+        <foreach collection="array" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

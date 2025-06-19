@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.playingmethod.mapper.ApiRollMapper">
+
+    <!-- TODO 标记参数含义 4 -->
+    <select id="getRollList" resultType="com.ruoyi.domain.vo.RollListDataVO">
+        SELECT
+            tr.id,
+            tr.roll_type,
+            trj.total_price as total_ornaments_price,
+            CASE
+                WHEN tr.roll_type = '0' THEN '官方房'
+                WHEN tr.roll_type = '1' THEN '主播房'
+            END AS rollTypeName,
+            tr.roll_password,
+            tu.nick_name,
+            tu.avatar,
+            tr.roll_name,
+            tr.description,
+            tr.end_time,
+            (SELECT COUNT(tru.roll_id) FROM tt_roll_user tru WHERE tr.id = tru.roll_id) AS currentPeopleNum,
+            tr.people_num,
+            tr.roll_status,
+            tr.min_recharge
+        FROM tt_roll tr
+        LEFT JOIN tt_user tu ON tr.user_id = tu.user_id
+        LEFT JOIN tt_roll_jackpot trj ON tr.jackpot_id = trj.jackpot_id
+        <where>
+            <if test="rollName != null"> AND tr.roll_name LIKE CONCAT("%",#{rollName},"%") </if>
+            <if test="rollStatus != null"> AND tr.roll_status = #{rollStatus} </if>
+            <if test="rollType != null"> AND tr.roll_type = #{rollType} </if>
+            <if test="userId != null">
+                AND tr.id in (
+                    select
+                    roll_id
+                    from tt_roll_user
+                    where user_id = #{userId}
+                )
+            </if>
+            and tr.del_flag = 0
+        </where>
+        ORDER BY tr.create_time DESC
+        limit #{limit}, #{size}
+    </select>
+
+    <select id="getRollDetails" resultType="com.ruoyi.domain.vo.RollDetailsDataVO">
+        SELECT
+            tr.roll_name,
+            tr.description,
+            tr.roll_type,
+            tr.min_recharge,
+            CASE
+                WHEN tr.roll_type = '0' AND tr.user_id = 0 THEN '官方'
+                WHEN tr.roll_type = '1' AND tr.user_id != 0 THEN '主播'
+                END AS rollTypeName,
+            tr.end_time,
+            (SELECT COUNT(tru.roll_id) FROM tt_roll_user tru WHERE tr.id = tru.roll_id) AS currentPeopleNum,
+            tr.people_num,
+            SUM(trjo.ornaments_num) AS ornamentsNum,
+            SUM(tto.use_price * trjo.ornaments_num) AS totalOrnamentsPrice,
+            tr.roll_status
+        FROM tt_roll tr
+             LEFT JOIN tt_roll_jackpot_ornaments trjo ON tr.jackpot_id = trjo.jackpot_id
+             LEFT JOIN tt_ornament tto ON trjo.ornaments_id = tto.id
+        WHERE tr.id = #{rollId}
+    </select>
+
+    <select id="getJackpotData" resultType="com.ruoyi.domain.other.JackpotData">
+        SELECT
+            tto.name,
+            tto.use_price,
+            tto.image_url,
+            tto.short_name,
+            tto.type_name,
+            tto.exterior_name,
+            tol.`level`,
+            tol.level_img,
+            trjo.id,
+            (SELECT COUNT(tru.jackpot_ornaments_id) FROM tt_roll_user tru WHERE tru.jackpot_ornaments_id = trjo.id) AS allocatedNum,
+            trjo.ornaments_num - (SELECT COUNT(tru.jackpot_ornaments_id) FROM tt_roll_user tru WHERE tru.jackpot_ornaments_id = trjo.id) AS unAllocatedNum,
+            trjo.ornaments_num
+        FROM tt_roll_jackpot_ornaments trjo
+                 LEFT JOIN tt_ornament tto ON trjo.ornaments_id = tto.id
+                 LEFT JOIN tt_ornaments_level tol ON trjo.ornaments_level_id = tol.id
+        WHERE trjo.jackpot_id = #{jackpotId}
+    </select>
+</mapper>

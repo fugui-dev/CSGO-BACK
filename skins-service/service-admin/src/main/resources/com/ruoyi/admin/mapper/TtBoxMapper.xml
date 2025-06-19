@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtBoxMapper">
+
+    <select id="selectTtBoxList" resultType="com.ruoyi.domain.vo.TtBoxDataVO"
+            parameterType="com.ruoyi.domain.other.TtBoxBody">
+        SELECT tb.box_id,
+        tb.box_name,
+        tb.box_type_id,
+        tbt.`name` AS boxTypeName,
+        tb.price,
+        tb.box_img01,
+        tb.box_img02,
+        tb.sort,
+        tb.is_fight,
+        tb.`status`,
+        tb.open_num,
+        tb.is_home,
+        (SELECT SUM(tbo.real_odds) * tb.price
+        FROM tt_box_ornaments tbo
+        WHERE tbo.box_id = tb.box_id) AS amountConsumed,
+        (SELECT SUM(tto.use_price*tbo.real_odds)
+        FROM tt_box_ornaments tbo
+        LEFT JOIN tt_ornament tto ON tbo.ornament_id = tto.id
+        WHERE tbo.box_id = tb.box_id) AS aggregateAmount
+        FROM tt_box tb
+        LEFT JOIN tt_box_type tbt ON tb.box_type_id = tbt.id
+        <where>
+            <if test="boxId != null">AND tb.box_id = #{boxId}</if>
+            <if test="boxName != null">AND tb.box_name LIKE CONCAT('%',#{boxName},'%')</if>
+            <if test="status != null">AND tb.`status` = #{status}</if>
+            <if test="isFight != null">AND tb.is_fight = #{isFight}</if>
+            AND tb.del_flag = '0'
+        </where>
+        ORDER BY tb.price ASC
+    </select>
+
+    <select id="globalData" resultType="com.ruoyi.domain.vo.box.BoxGlobalData">
+        SELECT
+        tb.box_id,
+        tb.box_name,
+        tb.price,
+        tb.open_num,
+
+        (
+        SELECT
+        SUM(tbo.real_odds) * tb.price
+        FROM
+        tt_box_ornaments tbo
+        WHERE
+        tbo.box_id = tb.box_id
+        ) AS commonAmountConsumed,
+
+        (
+        SELECT
+        SUM(tto.use_price*tbo.real_odds)
+        FROM
+        tt_box_ornaments tbo
+        LEFT JOIN tt_ornament tto ON tbo.ornament_id = tto.id
+        WHERE
+        tbo.box_id = tb.box_id
+        ) AS commonAggregateAmount,
+
+        (
+        SELECT
+        SUM(tbo.anchor_odds) * tb.price
+        FROM
+        tt_box_ornaments tbo
+        WHERE
+        tbo.box_id = tb.box_id
+        ) AS anchorAmountConsumed,
+
+        (
+        SELECT
+        SUM(tto.use_price*tbo.anchor_odds)
+        FROM
+        tt_box_ornaments tbo
+        LEFT JOIN tt_ornament tto ON tbo.ornament_id = tto.id
+        WHERE
+        tbo.box_id = tb.box_id
+        ) AS anchorAggregateAmount
+
+        FROM tt_box tb
+        <where>
+            <if test="boxId != null">AND tb.box_id = #{boxId}</if>
+            AND tb.del_flag = '0'
+        </where>
+    </select>
+</mapper>

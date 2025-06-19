@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtReplacementRecordMapper">
+    
+    <resultMap type="TtReplacementRecord" id="TtReplacementRecordResult">
+        <result property="id"    column="id"    />
+        <result property="uid"    column="uid"    />
+        <result property="uname"    column="uname"    />
+        <result property="oids"    column="oids"    />
+        <result property="awardOid"    column="award_oid"    />
+        <result property="awardOname"    column="award_oname"    />
+        <result property="awardOprice"    column="award_oprice"    />
+        <result property="awardOimg"    column="award_oimg"    />
+        <result property="time"    column="time"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectTtReplacementRecordVo">
+        select id, uid, uname, oids, award_oid, award_oname, award_oprice,award_oimg, time, create_time, update_time from tt_replacement_record
+    </sql>
+
+    <select id="selectTtReplacementRecordList" parameterType="TtReplacementRecord" resultMap="TtReplacementRecordResult">
+        <include refid="selectTtReplacementRecordVo"/>
+        <where>  
+            <if test="uid != null "> and uid = #{uid}</if>
+            <if test="uname != null  and uname != ''"> and uname like concat('%', #{uname}, '%')</if>
+            <if test="oids != null  and oids != ''"> and oids = #{oids}</if>
+            <if test="awardOid != null "> and award_oid = #{awardOid}</if>
+            <if test="awardOname != null  and awardOname != ''"> and award_oname like concat('%', #{awardOname}, '%')</if>
+            <if test="awardOprice != null "> and award_oprice = #{awardOprice}</if>
+            <if test="time != null "> and time = #{time}</if>
+        </where>
+    </select>
+    
+    <select id="selectTtReplacementRecordById" parameterType="Long" resultMap="TtReplacementRecordResult">
+        <include refid="selectTtReplacementRecordVo"/>
+        where id = #{id}
+    </select>
+        
+    <insert id="insertTtReplacementRecord" parameterType="TtReplacementRecord" useGeneratedKeys="true" keyProperty="id">
+        insert into tt_replacement_record
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="uid != null">uid,</if>
+            <if test="uname != null">uname,</if>
+            <if test="oids != null">oids,</if>
+            <if test="awardOid != null">award_oid,</if>
+            <if test="awardOname != null">award_oname,</if>
+            <if test="awardOprice != null">award_oprice,</if>
+            <if test="awardOimg != null">award_oimg,</if>
+            <if test="time != null">time,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="uid != null">#{uid},</if>
+            <if test="uname != null">#{uname},</if>
+            <if test="oids != null">#{oids},</if>
+            <if test="awardOid != null">#{awardOid},</if>
+            <if test="awardOname != null">#{awardOname},</if>
+            <if test="awardOprice != null">#{awardOprice},</if>
+            <if test="awardOimg != null">#{awardOimg},</if>
+            <if test="time != null">#{time},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTtReplacementRecord" parameterType="TtReplacementRecord">
+        update tt_replacement_record
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="uid != null">uid = #{uid},</if>
+            <if test="uname != null">uname = #{uname},</if>
+            <if test="oids != null">oids = #{oids},</if>
+            <if test="awardOid != null">award_oid = #{awardOid},</if>
+            <if test="awardOname != null">award_oname = #{awardOname},</if>
+            <if test="awardOprice != null">award_oprice = #{awardOprice},</if>
+            <if test="time != null">time = #{time},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTtReplacementRecordById" parameterType="Long">
+        delete from tt_replacement_record where id = #{id}
+    </delete>
+
+    <delete id="deleteTtReplacementRecordByIds" parameterType="String">
+        delete from tt_replacement_record where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

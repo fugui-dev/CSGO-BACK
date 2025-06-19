@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.playingmethod.mapper.ApiBindBoxMapper">
+
+    <select id="getBoxData" resultType="com.ruoyi.domain.other.TtBoxA">
+        SELECT box_id,
+               box_name,
+               box_type_id,
+               price,
+               box_img01,
+               box_img02
+        FROM tt_box
+        WHERE box_id = #{boxId}
+          AND del_flag = '0'
+    </select>
+
+    <select id="getBoxOrnamentsList" resultType="com.ruoyi.domain.other.TtOrnamentsA">
+        SELECT tto.id AS ornament_id,
+               tto.name,
+               tto.short_name,
+               tto.use_price,
+               tto.image_url,
+               tto.exterior_name,
+               tol.id AS ornamentsLevelId,
+               tol.level_img,
+               tbo.odds
+        FROM tt_box_ornaments tbo
+                 LEFT JOIN tt_ornament tto ON tbo.ornament_id = tto.id
+                 LEFT JOIN tt_ornaments_level tol ON tbo.level = tol.id
+        WHERE tbo.box_id = #{boxId}
+        order by tto.use_price desc
+    </select>
+
+    <select id="getBoxList" resultType="com.ruoyi.domain.other.TtBoxA">
+        SELECT
+        box_id,
+        box_name,
+        price,
+        box_img01,
+        box_img02,
+        box_type_id
+        FROM tt_box
+        <where>
+            <if test="boxTypeId != null">and box_type_id = #{boxTypeId}</if>
+            <if test="homeFlag != null">and is_home = '0'</if>
+            <if test="isFight != null">and is_fight = #{isFight}</if>
+            AND del_flag = '0' AND status = '0'
+        </where>
+        ORDER BY sort ASC ,price ASC
+    </select>
+
+    <select id="getOrnamentsData" resultType="com.ruoyi.domain.other.TtOrnamentsA">
+        SELECT #{id}     as id,
+               tbo.ornaments_id,
+               tto.name,
+               tto.short_name,
+               tto.use_price,
+               tto.image_url,
+               tto.exterior_name,
+               tbo.level as ornamentsLevelId,
+               tol.level_img
+        FROM tt_box_ornaments tbo
+                 LEFT JOIN tt_ornament tto ON tbo.ornaments_id = tto.id
+                 LEFT JOIN tt_ornaments_level tol ON tbo.level = tol.id
+        WHERE tbo.box_id = #{boxId}
+          AND tbo.ornaments_id = #{ornamentsId}
+        LIMIT 1
+    </select>
+
+    <select id="getBindBoxHistory" resultType="com.ruoyi.domain.other.TtBoxUser">
+        SELECT tbr.id,
+               tbr.box_id,
+               tbr.user_id,
+               ttu.user_name,
+               ttu.nick_name,
+               ttu.avatar,
+               tbr.ornament_id,
+               tto.name,
+               tto.short_name,
+               tto.use_price,
+               tto.image_url,
+               tto.exterior_name,
+               tbr.ornaments_level_id,
+               tol.level_img,
+               tbr.source
+        FROM tt_box_records tbr
+                 LEFT JOIN tt_user ttu ON tbr.user_id = ttu.user_id
+                 LEFT JOIN tt_ornament tto ON tbr.ornament_id = tto.id
+                 LEFT JOIN tt_ornaments_level tol ON tbr.ornaments_level_id = tol.id
+        <where>
+            <if test="boxId != null"> AND tbr.box_id = #{boxId} </if>
+            <if test="userType != null"> AND ttu.user_type = #{userType} </if>
+            AND tbr.source = '1'
+        </where>
+        ORDER BY tbr.create_time DESC
+    </select>
+
+    <select id="getProbabilityDistribution"
+            resultType="com.ruoyi.domain.other.TtBoxLevelA">
+        SELECT
+            o1.id AS ornamentsLevelId,
+            o1.`level`,
+            IFNULL(o2.probability,'00.00%') AS probability
+        FROM
+            tt_ornaments_level o1
+                left JOIN (
+
+        SELECT
+            tbo.`level` AS ornamentsLevelId,
+            tol.`level`,
+            CONCAT(FORMAT(SUM(tbo.odds) / (SELECT SUM(odds) FROM tt_box_ornaments WHERE box_id = #{boxId}) * 100, 2), '%') AS probability
+        FROM tt_box_ornaments tbo
+                 LEFT JOIN tt_ornaments_level tol ON tbo.`level` = tol.id
+        WHERE tbo.box_id = #{boxId}
+        GROUP BY tbo.`level`
+
+        ) as o2 on o1.id = o2.ornamentsLevelId
+        order by ornamentsLevelId
+    </select>
+
+<!--    <select id="getProbabilityDistribution"-->
+<!--            resultType="com.ruoyi.domain.other.TtBoxLevelA">-->
+<!--        SELECT-->
+<!--            tbo.`level` AS ornamentsLevelId,-->
+<!--            tol.`level`,-->
+<!--            CONCAT(FORMAT(SUM(tbo.odds) / (SELECT SUM(odds) FROM tt_box_ornaments WHERE box_id = #{boxId}) * 100, 2), '%') AS probability-->
+<!--        FROM tt_box_ornaments tbo-->
+<!--                 RIGHT JOIN tt_ornaments_level tol ON tbo.`level` = tol.id-->
+<!--        WHERE tbo.box_id = #{boxId}-->
+<!--        GROUP BY tbo.`level`;-->
+<!--    </select>-->
+
+    <select id="ornamentsInfo" resultType="com.ruoyi.domain.other.TtOrnamentsA">
+
+        SELECT
+               tto.id as ornament_id,
+               tto.name as name,
+               tto.short_name,
+               tto.use_price,
+               tto.image_url,
+               tto.exterior_name,
+               tbo.level as ornamentsLevelId,
+               tol.level_img
+        FROM tt_box_ornaments tbo
+        LEFT JOIN tt_ornament tto ON tbo.ornament_id = tto.id
+        LEFT JOIN tt_ornaments_level tol ON tbo.level = tol.id
+        WHERE tbo.box_id = #{boxId}
+        AND tbo.ornament_id = #{ornamentId}
+        LIMIT 1
+
+    </select>
+
+
+</mapper>

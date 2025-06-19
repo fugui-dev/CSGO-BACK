@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtPromotionUpdateMapper">
+
+    <select id="latelyUpdate" resultType="com.ruoyi.domain.vo.TeamDetailVO">
+        select
+        employee_id,
+        max(create_time) as begin_time
+        from
+            tt_promotion_update
+        where
+            employee_id in
+            <foreach collection="allEmployeesId" item="employee" open="(" separator="," close=")">
+                #{employee}
+            </foreach>
+        group by employee_id
+    </select>
+
+</mapper>

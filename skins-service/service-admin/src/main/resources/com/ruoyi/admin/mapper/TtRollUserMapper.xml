@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtRollUserMapper">
+
+    <select id="byRollId" resultType="java.util.List">
+
+    </select>
+
+    <select id="pageByRollId" resultType="com.ruoyi.domain.vo.roll.RollUserVO">
+        select
+            id,
+            ttu.nick_name as nick_name,
+            ttu.avatar as avatar,
+            roll_id,
+            tru.status as status,
+            join_time
+        from tt_roll_user tru
+        left join tt_user ttu on tru.user_id = ttu.user_id
+        where roll_id = #{rollId}
+        limit #{limit},#{size}
+    </select>
+
+    <select id="rollWinners" resultType="com.ruoyi.domain.vo.roll.RollUserPrizeVO">
+        select
+            trup.id as rollUserPrizeId,
+            tru.roll_id,
+            tru.user_id,
+            tru.nick_name,
+            trup.ornament_id,
+            trup.ornament_name,
+            trup.price,
+            trup.img_url as ornamentImg
+        from tt_roll_user_prize trup
+        left join tt_roll_user tru on trup.roll_user_id = tru.id
+        where tru.roll_id = #{rollId}
+    </select>
+
+</mapper>

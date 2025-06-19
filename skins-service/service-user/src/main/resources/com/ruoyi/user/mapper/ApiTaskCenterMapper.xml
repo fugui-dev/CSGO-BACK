@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.user.mapper.ApiTaskCenterMapper">
+
+  <select id="selectApiTaskCenterVOList" parameterType="Long" resultType="com.ruoyi.user.model.vo.ApiTaskCenterVO">
+    SELECT
+      tc.task_id, tc.task_name, tc.description,
+      -- 领取条件（0不满足 1满足）
+      CASE WHEN tcu.user_id IS NULL THEN '0' ELSE '1' END AS status,
+      tcu.claimed
+    FROM
+      tt_task_center AS tc
+    LEFT JOIN
+      tt_task_center_user AS tcu ON tc.type = tcu.type AND tcu.user_id = #{userId}
+  </select>
+
+  <select id="getYesterdayExpenditure" resultType="com.ruoyi.user.model.dto.YesterdayExpenditureDTO">
+    SELECT
+      user_id AS userId,
+      IFNULL(SUM(arrival_amount), 0) AS totalRecharge
+    FROM
+      tt_recharge_record
+    WHERE
+        create_time >= CURDATE() - INTERVAL 1 DAY
+      AND create_time &lt; CURDATE()
+      AND arrival_amount IS NOT NULL
+      AND arrival_amount != 0.00
+    GROUP BY
+      user_id
+  </select>
+
+  <select id="selectTaskTypeByTaskId" parameterType="Integer" resultType="String">
+    SELECT type FROM tt_task_center WHERE task_id = #{taskId}
+  </select>
+
+  <select id="selectCreditByUserIdAndType" resultType="java.math.BigDecimal">
+    SELECT credit FROM tt_task_center_user WHERE user_id = #{userId} AND type = #{type}
+  </select>
+
+  <select id="selectTtTaskCenterUserByUserIdAndType" resultType="com.ruoyi.user.model.TtTaskCenterUser">
+    SELECT * FROM tt_task_center_user WHERE user_id = #{userId} AND type = #{type}
+  </select>
+
+  <insert id="insertYesterdayExpenditureBonusPoints">
+    INSERT INTO tt_task_center_user (user_id, type, credit)
+    VALUES
+    <foreach collection="list" item="item" separator=",">
+      (#{item.userId}, #{item.type}, #{item.credit})
+    </foreach>
+  </insert>
+
+  <delete id="deleteYesterdayExpenditureBonusPoints">
+    DELETE FROM tt_task_center_user WHERE type = 0
+  </delete>
+
+  <delete id="markAsClaimedByUserIdAndType">
+    UPDATE tt_task_center_user SET claimed = 1 WHERE user_id = #{userId} AND type = #{type}
+  </delete>
+</mapper>

@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.thirdparty.wechat.mapper.TtUserLsjlMapper">
+
+    <resultMap type="com.ruoyi.thirdparty.wechat.entity.TtUserLsjl" id="TtUserLsjlResult">
+        <result property="id" column="id"/>
+        <result property="ttUserId" column="tt_user_id"/>
+        <result property="ttSsUserId" column="tt_ss_user_id"/>
+        <result property="type" column="type"/>
+        <result property="vCoinBefore" column="v_coin_before"/>
+        <result property="vCoinAfter" column="v_coin_after"/>
+        <result property="vCoinChange" column="v_coin_change"/>
+        <result property="dCoinBefore" column="d_coin_before"/>
+        <result property="dCoinChange" column="d_coin_change"/>
+        <result property="dCoinAfter" column="d_coin_after"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <resultMap type="com.ruoyi.thirdparty.wechat.entity.TtUserLsjl" id="TtUserLsjlResult1">
+        <result property="id" column="id"/>
+        <result property="ttUserId" column="tt_user_id"/>
+        <result property="type" column="type"/>
+        <result property="vCoinBefore" column="v_coin_before"/>
+        <result property="vCoinAfter" column="v_coin_after"/>
+        <result property="vCoinChange" column="v_coin_change"/>
+        <result property="dCoinBefore" column="d_coin_before"/>
+        <result property="dCoinChange" column="d_coin_change"/>
+        <result property="dCoinAfter" column="d_coin_after"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <sql id="selectTtUserLsjlVo">
+        select id,
+               tt_user_id,
+               type,
+               v_coin_before,
+               v_coin_after,
+               v_coin_change,
+               d_coin_before,
+               d_coin_change,
+               d_coin_after,
+               create_time,
+               update_time
+        from tt_user_lsjl
+    </sql>
+
+    <select id="selectTtUserLsjlList" parameterType="com.ruoyi.thirdparty.wechat.entity.TtUserLsjlParam"
+            resultMap="TtUserLsjlResult1">
+        SELECT
+        ( @i := @i + 1 ) id,
+        tt_user_id,
+        `type` ,
+        SUM(v_coin_before) v_coin_before,
+        SUM(v_coin_after) v_coin_after,
+        SUM(v_coin_change) v_coin_change,
+        SUM(d_coin_before) d_coin_before,
+        SUM(d_coin_change) d_coin_change,
+        SUM(d_coin_after) d_coin_after,
+        DATE_FORMAT(create_time, '%Y-%m-%d') create_time
+        FROM tt_user_lsjl,(SELECT @i := 0 ) AS i
+        <where>
+            <if test="ttUserId != null ">and tt_user_id = #{ttUserId}</if>
+            <if test="ttSsUserId != null ">and tt_ss_user_id = #{ttSsUserId}</if>
+            <if test="type != null  and type != ''">and type = #{type}</if>
+            <!--            <if test="vCoinBefore != null "> and v_coin_before = #{vCoinBefore}</if>-->
+            <!--            <if test="vCoinAfter != null "> and v_coin_after = #{vCoinAfter}</if>-->
+            <!--            <if test="vCoinChange != null "> and v_coin_change = #{vCoinChange}</if>-->
+            <!--            <if test="dCoinBefore != null "> and d_coin_before = #{dCoinBefore}</if>-->
+            <!--            <if test="dCoinChange != null "> and d_coin_change = #{dCoinChange}</if>-->
+            <!--            <if test="dCoinAfter != null "> and d_coin_after = #{dCoinAfter}</if>-->
+            <if test="createTime != null ">and DAY ( create_time ) = DAY ( #{createTime})</if>
+        </where>
+        GROUP BY
+        tt_user_id, create_time, `type`
+    </select>
+
+    <select id="selectTtUserLsjlById" parameterType="Long" resultMap="TtUserLsjlResult">
+        <include refid="selectTtUserLsjlVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertTtUserLsjl" parameterType="com.ruoyi.thirdparty.wechat.entity.TtUserLsjl" useGeneratedKeys="true" keyProperty="id">
+        insert into tt_user_lsjl
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="ttUserId != null">tt_user_id,</if>
+            <if test="type != null">type,</if>
+            <if test="vCoinBefore != null">v_coin_before,</if>
+            <if test="vCoinAfter != null">v_coin_after,</if>
+            <if test="vCoinChange != null">v_coin_change,</if>
+            <if test="dCoinBefore != null">d_coin_before,</if>
+            <if test="dCoinChange != null">d_coin_change,</if>
+            <if test="dCoinAfter != null">d_coin_after,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="ttUserId != null">#{ttUserId},</if>
+            <if test="type != null">#{type},</if>
+            <if test="vCoinBefore != null">#{vCoinBefore},</if>
+            <if test="vCoinAfter != null">#{vCoinAfter},</if>
+            <if test="vCoinChange != null">#{vCoinChange},</if>
+            <if test="dCoinBefore != null">#{dCoinBefore},</if>
+            <if test="dCoinChange != null">#{dCoinChange},</if>
+            <if test="dCoinAfter != null">#{dCoinAfter},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateTtUserLsjl" parameterType="com.ruoyi.thirdparty.wechat.entity.TtUserLsjl">
+        update tt_user_lsjl
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="ttUserId != null">tt_user_id = #{ttUserId},</if>
+            <if test="type != null">type = #{type},</if>
+            <if test="vCoinBefore != null">v_coin_before = #{vCoinBefore},</if>
+            <if test="vCoinAfter != null">v_coin_after = #{vCoinAfter},</if>
+            <if test="vCoinChange != null">v_coin_change = #{vCoinChange},</if>
+            <if test="dCoinBefore != null">d_coin_before = #{dCoinBefore},</if>
+            <if test="dCoinChange != null">d_coin_change = #{dCoinChange},</if>
+            <if test="dCoinAfter != null">d_coin_after = #{dCoinAfter},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTtUserLsjlById" parameterType="Long">
+        delete
+        from tt_user_lsjl
+        where id = #{id}
+    </delete>
+
+    <delete id="deleteTtUserLsjlByIds" parameterType="String">
+        delete from tt_user_lsjl where id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

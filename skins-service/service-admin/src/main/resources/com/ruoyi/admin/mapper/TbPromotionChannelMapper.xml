@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TbPromotionChannelMapper">
+
+    <resultMap type="com.ruoyi.domain.entity.TbPromotionChannel" id="TbPromotionChannelResult">
+        <result property="id"    column="id"    />
+        <result property="channelName"    column="channel_name"    />
+        <result property="channelDomain"    column="channel_domain"    />
+        <result property="bdToken"    column="bd_token"    />
+        <result property="password"    column="password"    />
+        <result property="status"    column="status"    />
+        <result property="remark"    column="remark"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="delFlag"    column="del_flag"    />
+    </resultMap>
+
+    <sql id="selectTbPromotionChannelVo">
+        select id, channel_name, channel_domain, bd_token, password, status, remark, create_time, update_time, create_by, update_by, del_flag from tb_promotion_channel
+    </sql>
+
+    <select id="selectTbPromotionChannelList" parameterType="com.ruoyi.domain.entity.TbPromotionChannel" resultMap="TbPromotionChannelResult">
+        <include refid="selectTbPromotionChannelVo"/>
+        <where>
+            <if test="channelName != null  and channelName != ''"> and channel_name like concat('%', #{channelName}, '%')</if>
+            <if test="channelDomain != null  and channelDomain != ''"> and channel_domain = #{channelDomain}</if>
+            <if test="status != null "> and status = #{status}</if>
+        </where>
+    </select>
+
+    <select id="selectTbPromotionChannelById" parameterType="Long" resultMap="TbPromotionChannelResult">
+        <include refid="selectTbPromotionChannelVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertTbPromotionChannel" parameterType="com.ruoyi.domain.entity.TbPromotionChannel" useGeneratedKeys="true" keyProperty="id">
+        insert into tb_promotion_channel
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="channelName != null">channel_name,</if>
+            <if test="channelDomain != null">channel_domain,</if>
+            <if test="bdToken != null">bd_token,</if>
+            <if test="password != null">password,</if>
+            <if test="status != null">status,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="delFlag != null">del_flag,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="channelName != null">#{channelName},</if>
+            <if test="channelDomain != null">#{channelDomain},</if>
+            <if test="bdToken != null">#{bdToken},</if>
+            <if test="password != null">#{password},</if>
+            <if test="status != null">#{status},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+        </trim>
+    </insert>
+
+    <update id="updateTbPromotionChannel" parameterType="com.ruoyi.domain.entity.TbPromotionChannel">
+        update tb_promotion_channel
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="channelName != null">channel_name = #{channelName},</if>
+            <if test="channelDomain != null">channel_domain = #{channelDomain},</if>
+            <if test="bdToken != null">bd_token = #{bdToken},</if>
+            <if test="password != null">password = #{password},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTbPromotionChannelById" parameterType="Long">
+        delete from tb_promotion_channel where id = #{id}
+    </delete>
+
+    <delete id="deleteTbPromotionChannelByIds" parameterType="String">
+        update tb_promotion_channel
+            del_flag = 1
+        where id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

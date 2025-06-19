@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtUpgradeRecordMapper">
+
+    <select id="getUpgradeRecord" resultType="com.ruoyi.domain.vo.upgrade.UpgradeRecordVO" parameterType="com.ruoyi.domain.other.TtUpgradeRecordBody">
+        SELECT
+            tur.id,
+            tur.user_id,
+            tu.nick_name,
+            CASE WHEN tu.user_type = '02' THEN '普通用户' ELSE '主播' END AS user_type,
+            tu.avatar,
+            tur.amount_consumed,
+            tur.target_upgrade_id,
+            tur.target_ornament_id,
+            tur.target_ornament_price,
+            tto1.image_url AS targetImageUrl,
+            tto1.type_name AS targetTypeName,
+            tur.gain_ornaments_id,
+            tur.gain_ornaments_price,
+            tto2.item_name AS gainItemName,
+            tto2.image_url AS gainImageUrl,
+            tto2.type_name AS gainTypeName,
+            tur.open_time,
+            CASE WHEN tur.gain_upgrade_fail_id = 0 THEN '成功' ELSE '失败' END AS result,
+            tur.amount_consumed - tur.gain_ornaments_price AS profit
+        FROM tt_upgrade_record tur
+                 LEFT JOIN tt_user tu ON tur.user_id = tu.user_id
+                 LEFT JOIN tt_ornament tto1 ON tur.target_ornaments_id = tto1.id
+                 LEFT JOIN tt_ornament tto2 ON tur.gain_ornaments_id = tto2.id
+        <where>
+            <if test="userId != null"> AND tur.user_id = #{userId} </if>
+        </where>
+        ORDER BY tur.open_time DESC
+    </select>
+
+    <select id="adminGetLog" resultType="com.ruoyi.domain.vo.upgrade.UpgradeRecordVO">
+
+        SELECT
+            (select count(1) from tt_upgrade_record) as total,
+            tur.id,
+            tur.user_id,
+            tu.nick_name,
+            CASE WHEN tu.user_type = '02' THEN '普通用户' ELSE '主播' END AS user_type,
+            tu.avatar,
+            tto.name AS target_ornament_name,
+            tto.image_url AS target_ornament_img,
+            tto.type_name AS targetTypeName,
+            tur.amount_consumed,
+            tur.target_upgrade_id,
+            tur.target_ornament_id,
+            tur.target_ornament_price,
+            tur.gain_ornament_list,
+            tur.gain_ornaments_price,
+            tur.open_time,
+            tur.is_victory,
+            tur.amount_consumed - tur.gain_ornaments_price AS profit
+        FROM tt_upgrade_record tur
+        LEFT JOIN tt_user tu ON tur.user_id = tu.user_id
+        LEFT JOIN tt_ornament tto ON tur.target_ornament_id = tto.id
+        <where>
+            <if test="userId != null"> AND tur.user_id = #{userId} </if>
+        </where>
+        ORDER BY tur.open_time DESC
+        limit #{limit},#{size}
+
+    </select>
+</mapper>

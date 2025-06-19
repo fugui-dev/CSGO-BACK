@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtRechargeRecordMapper">
+
+    <select id="getLastHourRechargeUserIds" resultType="java.lang.Integer">
+        <![CDATA[
+        SELECT user_id
+        FROM (SELECT user_id,
+                     SUM(amount_actually_paid) AS total_price
+              FROM tt_recharge_record
+              WHERE create_time >= DATE_FORMAT(NOW() - INTERVAL 1 HOUR, '%Y-%m-%d %H:00:00')
+                AND create_time < DATE_FORMAT(NOW() - INTERVAL 1 HOUR, '%Y-%m-%d %H:59:59')
+              GROUP BY user_id) AS subquery
+        WHERE total_price >= #{minRecharge}
+        ]]>
+    </select>
+
+    <select id="getLastDayRechargeUserIds" resultType="java.lang.Integer">
+        <![CDATA[
+        SELECT user_id
+        FROM (SELECT user_id,
+                     SUM(amount_actually_paid) AS total_price
+              FROM tt_recharge_record
+              WHERE
+                  DATE (create_time) = CURDATE() - INTERVAL 1 DAY
+        GROUP BY user_id) AS subquery
+        WHERE total_price >= #{minRecharge}
+        ]]>
+    </select>
+
+    <select id="getLastWeekRechargeUserIds" resultType="java.lang.Integer">
+        <![CDATA[
+        SELECT user_id
+        FROM (SELECT user_id,
+                     SUM(amount_actually_paid) AS total_price
+              FROM tt_recharge_record
+              WHERE WEEKDAY(create_time) >= 0
+                AND WEEKDAY(create_time) < 7
+                AND YEARWEEK(create_time, 1) = YEARWEEK(NOW() - INTERVAL 1 WEEK, 1)
+              GROUP BY user_id) AS subquery
+        WHERE total_price >= #{minRecharge}
+        ]]>
+    </select>
+
+    <select id="getLastMonthRechargeUserIds" resultType="java.lang.Integer">
+        <![CDATA[
+        SELECT user_id
+        FROM (SELECT user_id,
+                     SUM(amount_actually_paid) AS total_price
+              FROM tt_recharge_record
+              WHERE
+                  YEAR (create_time) = YEAR (CURRENT_DATE - INTERVAL 1 MONTH)
+                AND MONTH (create_time) = MONTH (CURRENT_DATE - INTERVAL 1 MONTH)
+              GROUP BY user_id) AS subquery
+        WHERE total_price >= #{minRecharge}
+        ]]>
+    </select>
+    <select id="getFirstChargeNumByChannelId" resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT user_id) AS user_count
+        FROM tt_recharge_record
+        WHERE bd_promotion_channel_id = #{id};
+    </select>
+    <select id="getTotalChargeByChannelId" resultType="java.math.BigDecimal">
+        SELECT sum(arrival_amount) AS user_count
+        FROM tt_recharge_record
+        WHERE bd_promotion_channel_id = #{id};
+    </select>
+</mapper>

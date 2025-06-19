@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtBoxOrnamentsMapper">
+
+    <select id="selectBoxIdList" resultType="java.lang.Integer">
+        SELECT box_id
+        FROM tt_box_ornaments
+        GROUP BY box_id;
+    </select>
+
+    <select id="selectTtBoxOrnamentsList" resultType="com.ruoyi.domain.vo.TtBoxOrnamentsDataVO">
+        SELECT tbo.id,
+               tbo.box_id,
+               tbo.ornament_id,
+               tto.image_url,
+               tol.level_img,
+               tto.name,
+               tto.use_price,
+               tbo.`level`   AS ornamentsLevelId,
+               tol.`level`,
+               tbo.odds,
+               (CONCAT(ROUND(tbo.odds /
+                             (SELECT SUM(tbo1.odds) FROM tt_box_ornaments tbo1 WHERE tbo1.box_id = #{boxId}) * 100, 8),
+                       '%')) AS oddsPercentum,
+               tbo.real_odds,
+               (CONCAT(ROUND(tbo.real_odds /
+                             (SELECT SUM(tbo1.real_odds) FROM tt_box_ornaments tbo1 WHERE tbo1.box_id = #{boxId}) * 100,
+                             8),
+                       '%')) AS realOddsPercentum,
+               tbo.anchor_odds,
+               (CONCAT(ROUND(tbo.anchor_odds /
+                             (SELECT SUM(tbo1.anchor_odds) FROM tt_box_ornaments tbo1 WHERE tbo1.box_id = #{boxId}) *
+                             100, 8),
+                       '%')) AS anchorOddsPercentum
+        FROM tt_box_ornaments tbo
+                 LEFT JOIN tt_ornament tto ON tbo.ornament_id = tto.id
+                 LEFT JOIN tt_ornaments_level tol ON tbo.`level` = tol.id
+        WHERE tbo.box_id = #{boxId}
+        ORDER BY tto.use_price DESC
+    </select>
+    <select id="ornametBelongbox" resultType="com.ruoyi.domain.vo.TtBoxOrnamentsDataVO">
+        SELECT tbo.id,
+               tbo.box_id,
+               tbo.ornament_id,
+               tto.image_url,
+               tto.name,
+               tto.use_price,
+               tbo.`level`   AS ornamentsLevelId,
+               tol.`level`,
+               tbo.odds
+        FROM tt_box_ornaments tbo
+                 LEFT JOIN tt_ornament tto ON tbo.ornament_id = tto.id
+                 LEFT JOIN tt_ornaments_level tol ON tbo.`level` = tol.id
+        WHERE tbo.box_id = #{boxId}
+        ORDER BY tto.use_price DESC
+    </select>
+
+    <select id="simpleBoxDetail" resultType="com.ruoyi.domain.vo.upgrade.SimpleOrnamentVO">
+
+        SELECT tbo.id,
+               tbo.box_id,
+               tbo.ornament_id,
+               tto.image_url as ornament_img_url,
+               tol.level_img as ornament_level_img,
+               tto.name as ornament_name,
+               tto.use_price as ornament_price,
+               tbo.`level`   AS ornamentsLevelId,
+               tol.`level`
+        FROM tt_box_ornaments tbo
+                 LEFT JOIN tt_ornament tto ON tbo.ornament_id = tto.id
+                 LEFT JOIN tt_ornaments_level tol ON tbo.`level` = tol.id
+        WHERE tbo.box_id = #{boxId}
+        ORDER BY tto.use_price DESC
+
+    </select>
+
+    <select id="allOrnId" resultType="java.lang.Long">
+        select
+            ornament_id
+        from tt_box_ornaments tbo
+        where tbo.box_id  = #{boxId}
+    </select>
+</mapper>

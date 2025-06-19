@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.user.mapper.ApiShoppingMapper">
+
+    <select id="list" resultType="com.ruoyi.domain.vo.ApiShoppingDataVO">
+        SELECT
+            tto.id,
+            tto.name itemName,
+            tto.use_price * #{exchangePriceRatio} AS use_price,
+            tto.image_url,
+            tto.item_id,
+            tto.short_name,
+            tto.type,
+            tto.type_name,
+            tto.quality,
+            tto.quality_name,
+            tto.rarity,
+            tto.rarity_name,
+            tto.rarity_color,
+            tto.exterior,
+            tto.exterior_name
+        FROM tt_ornament tto
+        <where>
+            <if test="shoppingBody.itemName != null">and tto.name LIKE CONCAT('%',#{shoppingBody.itemName},'%')</if>
+            <if test="shoppingBody.type != null">and tto.type = #{shoppingBody.type}</if>
+            <if test="shoppingBody.quality != null">and tto.quality = #{shoppingBody.quality}</if>
+            <if test="shoppingBody.rarity != null">and tto.rarity = #{shoppingBody.rarity}</if>
+            <if test="shoppingBody.exterior != null">and tto.exterior = #{shoppingBody.exterior}</if>
+            <if test="shoppingBody.maxPrice != null">and tto.use_price * #{exchangePriceRatio} BETWEEN
+                #{shoppingBody.minPrice} AND #{shoppingBody.maxPrice}
+            </if>
+            and is_putaway = '0' and is_proprietary_property = '1'
+        </where>
+        <if test="shoppingBody.sortBy == 0">ORDER BY tto.use_price DESC</if>
+        <if test="shoppingBody.sortBy == 1">ORDER BY tto.use_price ASC</if>
+    </select>
+
+</mapper>

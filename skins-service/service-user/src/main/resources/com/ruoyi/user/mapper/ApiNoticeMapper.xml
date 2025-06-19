@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.user.mapper.ApiNoticeMapper">
+
+    <select id="getNoticeList" parameterType="Long" resultType="com.ruoyi.user.model.vo.ApiNoticeVO">
+        SELECT * FROM tt_notice WHERE user_id = #{userId}
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="getNoticeByNoticeId" resultType="com.ruoyi.user.model.vo.ApiNoticeVO">
+        SELECT * FROM tt_notice WHERE user_id = #{userId} AND notice_id = #{noticeId}
+    </select>
+    
+    <select id="countUnreadNotice" parameterType="Long" resultType="int">
+        SELECT COUNT(notice_id) FROM tt_notice WHERE `read` = 0 AND user_id = #{userId}
+    </select>
+
+    <insert id="addNotice" parameterType="com.ruoyi.domain.other.TtNotice">
+        insert into tt_notice
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="title != null and title != ''">title,</if>
+            <if test="content != null and content != ''">content,</if>
+            <if test="read != null">`read`,</if>
+            <if test="createTime != null">create_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="title != null and title != ''">#{title},</if>
+            <if test="content != null and content != ''">#{content},</if>
+            <if test="read != null">#{read},</if>
+            <if test="createTime != null">#{createTime},</if>
+        </trim>
+    </insert>
+
+    <update id="editNotice" parameterType="com.ruoyi.domain.other.TtNotice">
+        update tt_notice
+        <trim prefix="set" suffixOverrides=",">
+            <if test="title != null and title != ''">title = #{title},</if>
+            <if test="content != null and content != ''">content = #{content},</if>
+            <if test="read != null">`read` = #{read},</if>
+        </trim>
+        where notice_id = #{noticeId}
+    </update>
+
+    <delete id="removeNoticeByNoticeId" parameterType="Integer">
+        delete from tt_notice where notice_id = #{noticeId}
+    </delete>
+</mapper>

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.admin.mapper.TtWelfareMapper">
+
+  <resultMap type="TtWelfare" id="TtWelfareResult">
+    <result property="welfareId"    column="welfare_id"    />
+    <result property="welfareName"    column="welfare_name"    />
+    <result property="type"    column="type"    />
+    <result property="vipLevel"    column="vip_level"    />
+    <result property="boxId"    column="box_id"    />
+    <result property="createTime"    column="create_time"    />
+    <result property="updateTime"    column="update_time"    />
+  </resultMap>
+
+  <sql id="selectTtWelfareVo">
+    select welfare_id, welfare_name, type, vip_level, box_id, create_time, update_time from tt_welfare
+  </sql>
+
+  <select id="selectTtWelfareList" parameterType="TtWelfare" resultMap="TtWelfareResult">
+    <include refid="selectTtWelfareVo"/>
+    <where>
+      <if test="welfareName != null  and welfareName != ''"> and welfare_name like concat('%', #{welfareName}, '%')</if>
+      <if test="type != null  and type != ''"> and type = #{type}</if>
+      <if test="vipLevel != null "> and vip_level = #{vipLevel}</if>
+      <if test="boxId != null "> and box_id = #{boxId}</if>
+    </where>
+  </select>
+
+  <select id="selectTtWelfareByWelfareId" parameterType="Integer" resultMap="TtWelfareResult">
+    <include refid="selectTtWelfareVo"/>
+    where welfare_id = #{welfareId}
+  </select>
+
+  <insert id="insertTtWelfare" parameterType="TtWelfare" useGeneratedKeys="true" keyProperty="welfareId">
+    insert into tt_welfare
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="welfareName != null">welfare_name,</if>
+      <if test="type != null">type,</if>
+      <if test="vipLevel != null">vip_level,</if>
+      <if test="boxId != null">box_id,</if>
+      <if test="createTime != null">create_time,</if>
+      <if test="updateTime != null">update_time,</if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="welfareName != null">#{welfareName},</if>
+      <if test="type != null">#{type},</if>
+      <if test="vipLevel != null">#{vipLevel},</if>
+      <if test="boxId != null">#{boxId},</if>
+      <if test="createTime != null">#{createTime},</if>
+      <if test="updateTime != null">#{updateTime},</if>
+    </trim>
+  </insert>
+
+  <update id="updateTtWelfare" parameterType="TtWelfare">
+    update tt_welfare
+    <trim prefix="SET" suffixOverrides=",">
+      <if test="welfareName != null">welfare_name = #{welfareName},</if>
+      <if test="type != null">type = #{type},</if>
+      <if test="vipLevel != null">vip_level = #{vipLevel},</if>
+      <if test="boxId != null">box_id = #{boxId},</if>
+      <if test="createTime != null">create_time = #{createTime},</if>
+      <if test="updateTime != null">update_time = #{updateTime},</if>
+    </trim>
+    where welfare_id = #{welfareId}
+  </update>
+
+  <delete id="deleteTtWelfareByWelfareId" parameterType="Integer">
+    delete from tt_welfare where welfare_id = #{welfareId}
+  </delete>
+
+  <delete id="deleteTtWelfareByWelfareIds" parameterType="String">
+    delete from tt_welfare where welfare_id in
+    <foreach item="welfareId" collection="array" open="(" separator="," close=")">
+      #{welfareId}
+    </foreach>
+  </delete>
+</mapper>
