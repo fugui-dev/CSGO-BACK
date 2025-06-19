@@ -26,6 +26,9 @@ public class TtBoxDataVO {
     // 宝箱内饰品总价值
     private BigDecimal aggregateAmount;
 
+    private Long highValueOpenNum;
+    private Long mustHighValueOpenNum;
+
     // 利润
     private BigDecimal profit;
 

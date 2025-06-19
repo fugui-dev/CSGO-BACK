@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static com.ruoyi.admin.config.RedisConstants.VIP_ANCHOR_EXPERIENCE_KEY;
 
@@ -41,6 +42,8 @@ public class LotteryMachine {
 
     // 从mysql加载抽奖空间锁
     private static final String PRIZE_POOL_LOAD_LOCK = "prize_pool_load_lock";
+
+    private static final String USER_OPEN_BOX_COUNT = "user_open_box_count:";
 
     /**
      * 奖池信息预热key
@@ -318,7 +321,7 @@ public class LotteryMachine {
             // 4 抽奖
             Boolean isAnchorShow = false; //是否主播秀 FIXME
             isAnchorShow = player.getIsAnchorShow();
-            return doLottery(check, rebootFlag, isAnchorShow);
+            return doLottery(player, box, check, rebootFlag, isAnchorShow);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -339,7 +342,7 @@ public class LotteryMachine {
      * @param anchorShowFlag 是否主播秀（不出蓝）
      * @return
      */
-    private String doLottery(PrizePool prizePool, Boolean rebootFlag, Boolean anchorShowFlag) {
+    private String doLottery(TtUser player,TtBox box,PrizePool prizePool, Boolean rebootFlag, Boolean anchorShowFlag) {
 
         //如果开启了主播不出蓝，去除奖池中蓝色饰品(生成新奖池）
         if (anchorShowFlag){
@@ -364,6 +367,62 @@ public class LotteryMachine {
             pool.setBoxSpace(boxSpace1);
 
             prizePool = pool;
+        }else if (!rebootFlag){
+
+            if (Objects.nonNull(box.getHighValueOpenNum()) && box.getHighValueOpenNum() > 0
+                    && Objects.nonNull(box.getMustHighValueOpenNum()) && box.getMustHighValueOpenNum() > 0) {
+
+                List<TtBoxOrnaments> boxOrnamentsList = boxOrnamentsMapper.selectList(Wrappers.lambdaQuery(TtBoxOrnaments.class)
+                        .eq(TtBoxOrnaments::getBoxId, prizePool.getBoxId()));
+
+                String userKey = USER_OPEN_BOX_COUNT + box.getBoxId() + ":" + player.getUserId();
+
+                Object count = redisCache.getCacheObject(userKey);// 获取用户开箱次数
+
+                List<Integer> levelList = boxOrnamentsList.stream().map(TtBoxOrnaments::getLevel).distinct().sorted().collect(Collectors.toList());
+
+                log.info("箱子【{}】饰品等级列表：{}", box.getBoxId(), levelList);
+
+                Integer level = levelList.get(0);
+
+                log.info("箱子【{}】最高饰品等级：{}", box.getBoxId(), level);
+
+                if (ObjectUtil.isEmpty(count)) {
+                    log.info("用户【{}】开箱次数不存在，初始化为0", player.getUserId());
+                    boxOrnamentsList =boxOrnamentsList.stream().filter(item -> !Objects.equals(item.getLevel(), level)).collect(Collectors.toList());
+                    log.info("用户【{}】开箱次数不存在，过滤掉价值高的饰品", player.getUserId());
+                }else {
+                    Integer openCount = Integer.parseInt(count.toString());
+                    log.info("用户【{}】开箱次数：{}", player.getUserId(), openCount);
+
+                    if( openCount >= box.getHighValueOpenNum()) {
+
+                        if (openCount >= box.getMustHighValueOpenNum()) {
+                            log.info("用户【{}】开箱次数：{}，大于等于必须开高价值饰品次数：{}", player.getUserId(), openCount, box.getMustHighValueOpenNum());
+                            boxOrnamentsList = boxOrnamentsList.stream().filter(item -> Objects.equals(item.getLevel(), level)).collect(Collectors.toList());
+
+                            redisCache.deleteObject(USER_OPEN_BOX_COUNT + box.getBoxId() + ":" + player.getUserId()); // 删除用户开箱次数
+                        } else {
+                            log.info("用户【{}】开箱次数：{}，小于必须开高价值饰品次数：{}", player.getUserId(), openCount, box.getMustHighValueOpenNum());
+                        }
+                    }
+                }
+
+                Map<String, Integer> boxSpace1 = new HashMap<String, Integer>();
+                Integer GoodsNumber = 0;
+                for (TtBoxOrnaments ornaments : boxOrnamentsList) {
+                    boxSpace1.put(ornaments.getOrnamentId().toString(), ornaments.getAnchorOdds());
+                    GoodsNumber += ornaments.getAnchorOdds();
+                }
+
+                prizePool.setGoodsNumber(GoodsNumber);
+                prizePool.setBoxSpace(boxSpace1);
+
+                log.info("更新后的 奖池：{}, 总数{},抽奖空间：{}", prizePool.getKey(), prizePool.getGoodsNumber(), prizePool.getBoxSpace());
+
+
+            }
+
         }
 
         Map<String, Integer> boxSpace = prizePool.getBoxSpace();
@@ -377,7 +436,7 @@ public class LotteryMachine {
             Random random = new Random();
             int r = 0;
 //            for (int i = 0; i < 5; i++) {
-                r = random.nextInt(prizePool.getGoodsNumber());
+            r = random.nextInt(prizePool.getGoodsNumber());
 //            }
 
             log.info("抽奖随机数：{}", r);

@@ -68,6 +68,13 @@ public class TtBox implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date updateTime;
 
+    @Excel(name = "添加价值高的饰品开箱次数")
+    private Long highValueOpenNum;
+
+    @Excel(name = "必中价值高的饰品开箱次数")
+    private Long mustHighValueOpenNum;
+
+
     private String remark;
 
     @Excel(name = "是否首页推荐")
