@@ -18,6 +18,8 @@
         tb.`status`,
         tb.open_num,
         tb.is_home,
+        tb.high_value_open_num,
+        tb.must_high_value_open_num,
         (SELECT SUM(tbo.real_odds) * tb.price
         FROM tt_box_ornaments tbo
         WHERE tbo.box_id = tb.box_id) AS amountConsumed,
