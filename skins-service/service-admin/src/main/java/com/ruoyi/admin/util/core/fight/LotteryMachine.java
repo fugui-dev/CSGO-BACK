@@ -401,12 +401,15 @@ public class LotteryMachine {
                             log.info("用户【{}】开箱次数：{}，大于等于必须开高价值饰品次数：{}", player.getUserId(), openCount, box.getMustHighValueOpenNum());
                             boxOrnamentsList = boxOrnamentsList.stream().filter(item -> Objects.equals(item.getLevel(), level)).collect(Collectors.toList());
 
-                            redisCache.deleteObject(USER_OPEN_BOX_COUNT + box.getBoxId() + ":" + player.getUserId()); // 删除用户开箱次数
+                            redisCache.deleteObject(userKey); // 删除用户开箱次数
+                            count = 0;
                         } else {
                             log.info("用户【{}】开箱次数：{}，小于必须开高价值饰品次数：{}", player.getUserId(), openCount, box.getMustHighValueOpenNum());
                         }
                     }
                 }
+
+                redisCache.setCacheObject(userKey, String.valueOf((ObjectUtil.isEmpty(count) ? 0 : Integer.parseInt(count.toString())) + 1));
 
                 Map<String, Integer> boxSpace1 = new HashMap<String, Integer>();
                 Integer GoodsNumber = 0;
