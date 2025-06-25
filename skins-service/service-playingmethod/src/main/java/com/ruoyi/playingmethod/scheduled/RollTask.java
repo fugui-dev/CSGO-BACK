@@ -15,6 +15,7 @@ import com.ruoyi.domain.entity.TtBoxRecords;
 import com.ruoyi.domain.entity.fight.TtFight;
 import com.ruoyi.domain.entity.roll.TtRoll;
 import com.ruoyi.playingmethod.service.ApiFightService;
+import com.ruoyi.playingmethod.service.ApiRollService;
 import com.ruoyi.playingmethod.websocket.WsFightHall;
 import com.ruoyi.playingmethod.websocket.WsFightRoom;
 import com.ruoyi.playingmethod.websocket.util.WsResult;
@@ -31,6 +32,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -64,6 +66,9 @@ public class RollTask {
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
+    @Autowired
+    private ApiRollService apiRollService;
+
     // 定时检查即将开奖的roll房（临界区：2分钟）
     @Scheduled(cron = "0 */2 * * * ?")
     private void refreshDayTask() {
@@ -87,25 +92,34 @@ public class RollTask {
 
         // 加入延时队列
         for (TtRoll roll : criticalRoll) {
+            Date now = DateUtils.getNowDate();
+            Date endTime = roll.getEndTime();
+            
+            // 检查是否已经到了开奖时间
+            if (now.before(endTime)) {
+                // 还没到开奖时间，计算剩余时间
+                long betweenMs = DateUtil.between(now, endTime, DateUnit.MS);
+                log.info("roll房{}-{}未到开奖时间，剩余{}秒", roll.getId(), roll.getRollName(), betweenMs/1000);
 
-            //相差时间
-            long betweenDay = DateUtil.between(DateUtils.getNowDate(), roll.getEndTime(), DateUnit.MS);
+                MessageProperties messageProperties = new MessageProperties();
+                messageProperties.setExpiration(String.valueOf(betweenMs)); // 消息的过期属性，单位 ms
+                Message message = new Message(String.valueOf(roll.getId()).getBytes(), messageProperties);
 
-            if (betweenDay < 0) {
-                // 直接开奖 todo !!!
+                // 延时队列实现开奖
+                rabbitTemplate.convertAndSend(
+                        DelayedQueueConfig.OPEN_ROLL_EXCHANGE,
+                        DelayedQueueConfig.OPEN_ROLL_KEY,
+                        message);
+            } else {
+                // 已过期，直接开奖
+                log.info("roll房{}-{}已过期，直接开奖", roll.getId(), roll.getRollName());
+                try {
+                    apiRollService.endROLL(roll.getId());
+                } catch (Exception e) {
+                    log.error("roll房{}开奖失败: {}", roll.getId(), e.getMessage());
+                }
             }
 
-            MessageProperties messageProperties = new MessageProperties();
-            messageProperties.setExpiration(String.valueOf(betweenDay)); // 消息的过期属性，单位 ms
-            Message message = new Message(String.valueOf(roll.getId()).getBytes(), messageProperties);
-
-            // 延时队列实现开奖
-            rabbitTemplate.convertAndSend(
-                    DelayedQueueConfig.OPEN_ROLL_EXCHANGE,
-                    DelayedQueueConfig.OPEN_ROLL_KEY,
-                    message);
-
-            log.info("roll房{}-{}加入临界区,{}秒后开奖",roll.getId(),roll.getRollName(),betweenDay*1000);
         }
 
     }
