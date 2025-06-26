@@ -1,5 +1,8 @@
 package com.ruoyi.domain.entity.fight;
 
+import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.TypeReference;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -17,16 +20,14 @@ import lombok.experimental.Accessors;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Accessors(chain = true)
 @Builder
-@TableName(value = "tt_fight",autoResultMap = true)
+@TableName(value = "tt_fight", autoResultMap = true)
 public class TtFight implements Serializable {
 
     @TableField(exist = false)
@@ -39,8 +40,8 @@ public class TtFight implements Serializable {
     private Integer userId;
 
     @Excel(name = "座位")
-    @TableField(value = "seats",typeHandler = JacksonTypeHandler.class)
-    private List<FightSeat> seats;
+    @TableField(value = "seats")
+    private String seats;
 
     // 1、欧皇 2、非酋
     @Excel(name = "对战模式")
@@ -58,12 +59,12 @@ public class TtFight implements Serializable {
     @Excel(name = "回合数")
     private Integer roundNumber;
 
-    @TableField(value = "winner_ids",typeHandler = JacksonTypeHandler.class)
-    private List<Integer> winnerIds;
+    @TableField(value = "winner_ids")
+    private String winnerIds;
 
     @Excel(name = "选择宝箱数据")
-    @TableField(value = "box_data",typeHandler = JacksonTypeHandler.class)
-    private Map<String, FightBoxVO> boxData;
+    @TableField(value = "box_data")
+    private String boxData;
 
     @Excel(name = "创建宝箱价格总数")
     private BigDecimal boxPriceTotal;
@@ -92,4 +93,40 @@ public class TtFight implements Serializable {
     private BigDecimal openTotalPrice;
 
     private Integer delFlag;
+
+    @TableField(exist = false)
+    private List<FightSeat> seatList;
+
+    @TableField(exist = false)
+    private Map<String, FightBoxVO> boxDataMap;
+
+    @TableField(exist = false)
+    private List<Integer> winnerList;
+
+
+    public List<FightSeat> getSeatList() {
+
+        if (this.seats == null || this.seats.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return JSONUtil.toList(this.seats, FightSeat.class);
+    }
+
+    public Map<String, FightBoxVO> getBoxDataMap() {
+
+        if (this.boxData == null || this.boxData.isEmpty()) {
+            return new HashMap<>();
+        }
+        return JSON.parseObject(this.boxData, new TypeReference<Map<String, FightBoxVO>>() {
+        });
+    }
+
+    public List<Integer> getWinnerList() {
+
+        if (this.winnerIds == null || this.winnerIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        return JSONUtil.toList(this.winnerIds, Integer.class);
+    }
 }

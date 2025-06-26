@@ -205,7 +205,7 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
 
 
     @Override
-    // @Transactional
+    @Transactional
     public R<Object> createFight(CreateFightBody createFightParam, TtUser player) {
 
         // log.info("初始化对局---------------------------------------------------------------------- 1");
@@ -218,13 +218,18 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
         TtFight fight = (TtFight) fightCheck.getData();
         fight.setModel(createFightParam.getModel());
         // 直接加入
-        List<FightSeat> seats = fight.getSeats();
+        List<FightSeat> seats = fight.getSeatList();
+
         FightSeat ready = seats.remove(0).sitDown(player.getUserId()).ready();
         // 补充用户信息
         ready.setAvatar(player.getAvatar());
         ready.setNickName(player.getNickName());
+
         seats.add(ready);
+
         Collections.reverse(seats);
+
+        fight.setSeats(JSONUtil.toJsonStr(seats));
 
         save(fight);
 
@@ -233,11 +238,12 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
                 .fightId(fight.getId())
                 .userId(player.getUserId())
                 .build();
+
         fightUserService.save(fightUser);
 
         // 账户结算
         readyFightAccounting(fight, player);
-        // transactionManager.commit(transaction);
+
 
         // ws广播最新对局（异步）
         CompletableFuture.runAsync(() -> {
@@ -261,15 +267,19 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
 
         // 本局箱子总数
         Integer boxNum = 0;
+
         LinkedHashMap<String, FightBoxVO> boxMap = new LinkedHashMap<>();
         // 计算整局游戏箱子总价
         BigDecimal boxTotalPrice = BigDecimal.ZERO;
+
         for (Integer boxId : boxIdAndNumber.keySet()) {
+
             TtBox box = new LambdaQueryChainWrapper<>(boxMapper)
                     .eq(TtBox::getBoxId, boxId)
                     .eq(TtBox::getIsFight, "0")
                     .eq(TtBox::getStatus, "0")
                     .one();
+
             if (ObjectUtils.isEmpty(box)) {
                 return R.fail("不存在的箱子！");
             }
@@ -283,13 +293,13 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
 
         // 回合数最多为15回合
         if (boxNum > 15 || boxNum <= 0) return R.fail("非法参数值 boxNum【" + boxNum + "】，宝箱数量范围1-15个！");
+
         if (player.getAccountAmount().add(player.getAccountCredits()).compareTo(boxTotalPrice) < 0)
             return R.fail("您的账户余额不足！");
 
-        // ObjectMapper objectMapper = new ObjectMapper();
-
         // 初始化座位信息
         ArrayList<FightSeat> seats = new ArrayList<>();
+
         for (int i = 0; i < createFightParam.getPlayerNumber(); i++) {
             FightSeat seat = FightSeat.builder()
                     .code(i)
@@ -300,13 +310,13 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
         }
 
         TtFight fight = TtFight.builder()
-                .boxData(boxMap)
+                .boxData(JSONUtil.toJsonStr(boxMap))
                 .boxPriceTotal(boxTotalPrice)
                 .status(0)
                 .roundNumber(boxNum)
                 .userId(player.getUserId())
                 .playerNum(createFightParam.getPlayerNumber())
-                .seats(seats)
+                .seats(JSONUtil.toJsonStr(seats))
                 .createTime(new Timestamp(System.currentTimeMillis()))
                 .build();
 
@@ -325,11 +335,14 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
                 .one();
 
         if (ObjectUtils.isEmpty(fight)) return R.fail("此对局已结束！");
+
         if (fight.getUserId().equals(player.getUserId())) return R.fail("您是对战发起者，无法重复加入！");
 
         // 如果已报名，直接进入房间
-        List<FightSeat> list = JSONUtil.toList(JSON.toJSONString(fight.getSeats()), FightSeat.class);
-        for (FightSeat seat : list) {
+        List<FightSeat> seats = fight.getSeatList();
+
+        for (FightSeat seat : seats) {
+
             if (ObjectUtil.isNotEmpty(seat.getPlayerId()) && seat.getPlayerId().equals(player.getUserId())) {
                 return R.ok(0, "已报名，再次进入房间。");
             }
@@ -339,35 +352,44 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
         if (player.getAccountAmount().add(player.getAccountCredits()).compareTo(fight.getBoxPriceTotal()) < 0)
             return R.fail("加入房间失败，您的账户余额不足！");
 
-        // 是否有空位，有空位就直接入座
-        List<FightSeat> seats = fight.getSeats();
+
         boolean f = false;
+
         Integer joinIndex = null;
+
         for (int i = 0; i < seats.size(); i++) {
+
             FightSeat seat = objectMapper.convertValue(seats.get(i), FightSeat.class);
+
             seats.set(i, seat);
+
             if (seat.getStatus().equals(0) && !f) {
+
                 seat.sitDown(player.getUserId());
+
                 seat.setAvatar(player.getAvatar());
+
                 seat.setNickName(player.getNickName());
+
                 f = !f;
+
                 joinIndex = i;
+
                 continue;
             }
+
             if (ObjectUtil.isNotEmpty(seat.getPlayerId()) && seat.getPlayerId().equals(player.getUserId())) {
-                if (ObjectUtil.isNotEmpty(joinIndex)) seats.get(joinIndex).sitUp();
+
+                if (Objects.nonNull(joinIndex)) seats.get(joinIndex).sitUp();
+
                 return R.fail(2, "不可重复加入对局。");
             }
         }
+
         if (!f) return R.fail("对局人满。");
 
-        try {
-            // 返回新的座位信息
-            return R.ok(objectMapper.writeValueAsString(seats));
-        } catch (JsonProcessingException e) {
-            log.warn("加入对局失败，请稍后重试。");
-            return R.fail("加入对局失败，请稍后重试。");
-        }
+        // 返回新的座位信息
+        return R.ok(seats);
     }
 
     // 加入房间
@@ -377,19 +399,15 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
         // 加入
         Boolean lock = false;
         for (int i = 0; i < 10; i++) {
-            // lock = redisLock.tryLock(JOIN_FIGHT_LOCK + fightId, 10L, 20L, TimeUnit.SECONDS);
+
             lock = redisLock.tryLock(JOIN_FIGHT_LOCK + fightId, 3L, 7L, TimeUnit.SECONDS);
-            if (lock){
+            if (lock) {
                 break;
             }
         }
 
         if (!lock) {
-            // try {
-            //     Thread.sleep(200);
-            // } catch (InterruptedException e) {
-            //     log.warn(e.getMessage());
-            // }
+
             return R.fail("服务器繁忙，稍后重试。");
         }
 
@@ -405,29 +423,27 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
                 return check;
             }
 
-            ObjectMapper objectMapper = new ObjectMapper();
-            List<FightSeat> seats = objectMapper.readValue((String) check.getData(), new com.fasterxml.jackson.core.type.TypeReference<List<FightSeat>>() {
-            });
+
             LambdaUpdateWrapper<TtFight> fightUpdate = new LambdaUpdateWrapper<>();
+
             fightUpdate
                     .eq(TtFight::getId, fightId)
                     .eq(TtFight::getStatus, 0)
-                    .set(TtFight::getSeats, check.getData());
-            if (seatsIsFull(seats)) {
-                System.out.println("人满");
-                // fightUpdate.set(TtFight::getStatus, 1);
-            }
+                    .set(TtFight::getSeats, JSONUtil.toJsonStr(check.getData()));
+
+
             update(fightUpdate);
+
             log.info("玩家{}加入对局{}", player.getUserId(), fightId);
 
             TtFight fight = getById(fightId);
+
             // ws广播参加对局玩家信息（异步）
             CompletableFuture.runAsync(() -> {
                 WsFightRoom.broadcastFight(fight.getId(), WsResult.ok(FIGHT_ROOM_INFO.name(), fight, "对战房间最新信息"));
             }, customThreadPoolExecutor);
-            // WsFightRoom.broadcastFight(fight.getId(), WsResult.ok(SMsgKey.FIGHT_ROOM_INFO.name(),fight,"对战房间最新信息"));
 
-            if (seatsIsFull(seats)) {
+            if (seatsIsFull(fight.getSeatList())) {
                 return R.ok(1, "加入对战成功。房间已满人");
             }
             return R.ok(0, "加入对战成功。");
@@ -444,24 +460,19 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
 
         TtFight fight = new LambdaQueryChainWrapper<TtFight>(fightMapper)
                 .eq(TtFight::getId, fightId)
-                // .eq(TtFight::getStatus, 0)
                 .one();
+
         if (ObjectUtil.isEmpty(fight)) return R.fail(null, "不存在的对局房间");
+
         if (fight.getStatus().equals(1)) return R.fail(fight, "对局已开始");
+
         if (fight.getStatus().equals(2) || fight.getStatus().equals(3)) return R.fail(fight, "对局已结束");
 
-        ObjectMapper objectMapper = new ObjectMapper();
-        Map<String, FightBoxVO> boxData = objectMapper.convertValue(fight.getBoxData(), new com.fasterxml.jackson.core.type.TypeReference<Map<String, FightBoxVO>>() {
-        });
-        List<FightSeat> seats = objectMapper.convertValue(fight.getSeats(), new com.fasterxml.jackson.core.type.TypeReference<List<FightSeat>>() {
-        });
 
-        for (FightSeat seat : seats) {
+        for (FightSeat seat : fight.getSeatList()) {
             if (!seat.getStatus().equals(2)) return R.fail("用户" + seat.getPlayerId() + "未准备。");
         }
 
-        fight.setBoxData(boxData);
-        fight.setSeats(seats);
         return R.ok(fight);
 
     }
@@ -469,9 +480,10 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
     // 开始游戏
     @Override
     public R fightBegin(Integer fightId, TtUser player) {
-        // TransactionStatus transaction = transactionManager.getTransaction(transactionDefinition);
+
 
         Boolean lock = false;
+
         for (int i = 0; i < 4; i++) {
 
             lock = redisLock.tryLock(JOIN_FIGHT_BEGIN_LOCK + fightId, 2L, 7L, TimeUnit.SECONDS);
@@ -484,10 +496,12 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
 
         // 多次尝试失败，检查一下房间状态
         if (!lock) {
+
             TtFight fight = new LambdaQueryChainWrapper<>(fightMapper)
                     .eq(TtFight::getId, fightId)
                     .one();
             if (fight.getStatus().equals(0)) return R.fail("系统繁忙，请稍后重试。");
+
             return R.ok(null, "游戏已经开始");
         }
 
@@ -496,11 +510,17 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
 
             // 检查对局信息
             R check = fightBeginCheck(fightId, player);
+
             if (!check.getCode().equals(200)) {
+
                 if (ObjectUtil.isEmpty(check.getData())) return check;
+
                 TtFight fight = objectMapper.convertValue(check.getData(), TtFight.class);
+
                 if (fight.getStatus().equals(1)) return R.ok(fight, "对局已开始");
+
                 if (fight.getStatus().equals(2) || fight.getStatus().equals(3)) return R.ok(fight, "对局已结束");
+
                 return check;
             }
 
@@ -509,25 +529,31 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
             // 抽奖 计算开箱结果
             List<TtBoxRecords> fightResult = newComputerFight(fight);
 
-            // if (ObjectUtil.isEmpty(fightResult) || fightResult.isEmpty()) return R.fail("系统维护中，请联系管理员。");
-
             // 计算胜负
-            List<Integer> winnerIds = computerWinner(fight.getModel(), fight.getSeats(), fightResult);
+            List<Integer> winnerIds = computerWinner(fight.getModel(), fight.getSeatList(), fightResult);
+
             // 分配战利品
             int count = 0;
+
             for (TtBoxRecords item : fightResult) {
 
                 if (ObjectUtil.isEmpty(item.getOrnamentId())) {
                     // 过滤掉抽空的情况
                     item.setHolderUserId(null);
+
                     continue;
                 }
 
                 if (winnerIds.contains(item.getUserId())) {
+
                     item.setHolderUserId(item.getUserId());
+
                 } else {
+
                     int i = count % winnerIds.size();
+
                     item.setHolderUserId(winnerIds.get(i));
+
                     count++;
                 }
             }
@@ -562,13 +588,16 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
 
                 // 构建结果集
                 // 根据宝箱id查询关联的所有饰品
-                Map<String, FightBoxVO> boxData = fight.getBoxData();
+                Map<String, FightBoxVO> boxData = fight.getBoxDataMap();
+
                 ArrayList<FightBoxVO> fightBoxVOList = new ArrayList<>();
+
                 boxData.keySet().forEach(boxId -> {
                     List<TtBoxOrnamentsDataVO> boxOrnamentsVOS = boxOrnamentsMapper.selectTtBoxOrnamentsList(Integer.valueOf(boxId));
                     boxData.get(boxId).setOrnaments(boxOrnamentsVOS);
                     fightBoxVOList.add(boxData.get(boxId));
                 });
+
                 FightResultVO resultVO = FightResultVO.builder()
                         .winnerIds(winnerIds)
                         .fightResult(fightResult)
@@ -580,10 +609,12 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
                         .eq(TtFight::getId, fightId)
                         .eq(TtFight::getStatus, 1)
                         .one();
+
                 resultVO.setFight(newFight);
-                // System.out.println("对战结果集:"+JSON.toJSONString(resultVO));
+
+
                 WsFightRoom.broadcastFight(fightId, WsResult.ok(FIGHT_RESULT.name(), resultVO));
-                // WsFightRoom.broadcastFight(fightId, WsResult.ok(FIGHT_ROOM_INFO.name(), newFight));
+
 
                 // 推送大厅最新的房间信息
                 LambdaQueryWrapper<TtFight> fightQuery = new LambdaQueryWrapper<>();
@@ -621,10 +652,9 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
 
         List<TtBoxRecords> loserBoxRecords = new ArrayList<>();
 
-        List<FightSeat> seats = fight.getSeats();
-
         List<Integer> losers = new ArrayList<>();
-        for (FightSeat seat : seats) {
+
+        for (FightSeat seat : fight.getSeatList()) {
             if (winnerIds.contains(seat.getPlayerId())) continue;
             losers.add(seat.getPlayerId());
         }
@@ -634,13 +664,13 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
 
         List<Integer> ornamentIds = JSONUtil.parseArray(loserPrize).toList(Integer.class);
 
-        // List<Integer> ornamentIds = strToList(loserPrize);
 
         if (ornamentIds.isEmpty()) return loserBoxRecords;
 
         List<TtOrnament> loserPrizeList = new LambdaQueryChainWrapper<>(ttOrnamentMapper)
                 .in(TtOrnament::getId, ornamentIds)
                 .list();
+
         if (ObjectUtil.isEmpty(loserPrizeList) || loserPrizeList.isEmpty()) return loserBoxRecords;
 
         for (Integer loserId : losers) {
@@ -677,10 +707,15 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
     public List<Integer> computerWinner(String model, List<FightSeat> seats, List<TtBoxRecords> fightResult) {
 
         List<Integer> winnerIds = new ArrayList<>();
+
         if (model.equals("0")) {
+
             BigDecimal max = BigDecimal.ZERO;
+
             for (FightSeat seat : seats) {
+
                 for (TtBoxRecords record : fightResult) {
+
                     if (record.getHolderUserId().equals(seat.getPlayerId())) {
                         seat.setAwardTotalPrices(seat.getAwardTotalPrices().add(record.getOrnamentsPrice()));
                     }
@@ -717,7 +752,7 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
                 }
             }
 
-            log.info("赢家{}",winnerIds);
+            log.info("赢家{}", winnerIds);
 
         } else {
             log.warn("非法的对战模式编号");
@@ -733,11 +768,13 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
 
         // TtFight fight = getById(fightId);
         TtFight fight = new LambdaQueryChainWrapper<>(fightMapper).eq(TtFight::getId, fightId).one();
+
         if (ObjectUtil.isNull(fight)) return R.fail("不存在的对局。");
         if (fight.getStatus().equals(0)) return R.fail(601, "对局尚未开始。");
         // if (!fight.getStatus().equals(2)) return R.fail(602,"对局已结束。");
 
         Long currentRound = -1L;
+
         if (!fight.getStatus().equals(2) && !fight.getStatus().equals(3)) {
 
             // 时间差 计算当前进行到第几回合
@@ -754,7 +791,8 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
         // 根据宝箱id查询关联的所有饰品
         ArrayList<FightBoxVO> fightBoxVOList = new ArrayList<>();
 
-        Map<String, FightBoxVO> boxData = fight.getBoxData();
+        Map<String, FightBoxVO> boxData = fight.getBoxDataMap();
+
         boxData.keySet().forEach(boxId -> {
             List<TtBoxOrnamentsDataVO> boxOrnamentsVOS = boxOrnamentsMapper.selectTtBoxOrnamentsList(Integer.valueOf(boxId));
             FightBoxVO fightBoxVO = JSONUtil.toBean(JSONUtil.toJsonStr(boxData.get(boxId)), FightBoxVO.class);
@@ -768,7 +806,7 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
 
         AudienceVO result = AudienceVO.builder()
                 .currentRound(currentRound.intValue())
-                .winnerIds(fight.getWinnerIds())
+                .winnerIds(fight.getWinnerList())
                 .fightResult(list)
                 .fight(fight)
                 .fightBoxVOList(fightBoxVOList)
@@ -783,6 +821,7 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
         TtFight fight = new LambdaQueryChainWrapper<>(fightMapper)
                 .eq(TtFight::getId, fightId)
                 .one();
+
         if (ObjectUtil.isEmpty(fight)) {
             return R.ok(null, "不存在的对局");
         }
@@ -799,12 +838,7 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
             lock = redisLock.tryLock(JOIN_FIGHT_END_LOCK + fightId, 2L, 7L, TimeUnit.SECONDS);
 
             if (!lock) {
-                // try {
-                //     Thread.sleep(200);
-                // } catch (InterruptedException e) {
-                //     e.printStackTrace();
-                //     log.warn("【fightEnd】等待获取释放异常。");
-                // }
+
                 continue;
             }
             break;
@@ -816,10 +850,13 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
             // 校验时间
             LocalDateTime now = LocalDateTime.now();
             Timestamp beginTime = fight.getBeginTime();
+
             LocalDateTime beginTime1 = beginTime.toLocalDateTime();
             Duration duration = Duration.between(beginTime1, now);
+
             Long second = duration.toMillis() / 1000;
             Integer roundTime = fightRoundTime / 1000;
+
             if (fight.getRoundNumber() * roundTime > second.intValue()) return R.fail("对局尚未结束，请稍后重试。");
 
             // 更新游戏状态
@@ -834,8 +871,8 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
             LambdaUpdateWrapper<TtBoxRecords> boxRecordsUpdate = new LambdaUpdateWrapper<>();
             boxRecordsUpdate
                     .eq(TtBoxRecords::getFightId, fightId)
-                    // .set(TtBoxRecords::getIsShow, 1);
                     .set(TtBoxRecords::getStatus, IN_PACKSACK_ON.getCode());
+
             boxRecordsService.update(boxRecordsUpdate);
 
             fight.setStatus(2);
@@ -874,28 +911,10 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
 
         TtFight fight = new LambdaQueryChainWrapper<>(fightMapper)
                 .eq(TtFight::getId, fightId)
-                // .eq(TtFight::getStatus, 0)
                 .one();
         if (ObjectUtil.isEmpty(fight)) return R.fail("不存在的对局。");
         if (fight.getStatus().equals(1)) return R.fail("对局进行中。");
         if (fight.getStatus().equals(2) || fight.getStatus().equals(3)) return R.fail("对局已结束。");
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        List<FightSeat> seats = objectMapper.convertValue(fight.getSeats(), new com.fasterxml.jackson.core.type.TypeReference<List<FightSeat>>() {
-            @Override
-            public Type getType() {
-                return super.getType();
-            }
-        });
-        fight.setSeats(seats);
-
-        Map<String, FightBoxVO> boxData = objectMapper.convertValue(fight.getBoxData(), new com.fasterxml.jackson.core.type.TypeReference<Map<String, FightBoxVO>>() {
-            @Override
-            public Type getType() {
-                return super.getType();
-            }
-        });
-        fight.setBoxData(boxData);
 
         return R.ok(fight);
     }
@@ -914,15 +933,13 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
         TtFight fight = objectMapper.convertValue(check.getData(), TtFight.class);
 
         // 更新座位状态
-        boolean flag = false;
-        for (FightSeat seat : fight.getSeats()) {
 
-            if (flag) break;
+        for (FightSeat seat : fight.getSeatList()) {
 
             //找到自己的座位
             if (seat.getPlayerId().equals(player.getUserId())) {
 
-                String lock = JOIN_FIGHT_SEAT_READY_LOCK + fightId+":"+seat.getCode();
+                String lock = JOIN_FIGHT_SEAT_READY_LOCK + fightId + ":" + seat.getCode();
 
                 Boolean tryLock = false;
                 for (int i = 0; i < 2; i++) {
@@ -931,12 +948,9 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
                 }
                 if (!tryLock) return R.fail("系统繁忙，请稍后重试。");
 
-                // if (ObjectUtil.isEmpty(seat.ready())) return R.fail("座位状态异常。");
-                // updateById(fight);
 
                 try {
                     //座位准备
-                    // if (ObjectUtil.isEmpty(seat.ready())) return R.fail("座位状态异常。");
                     if (seat.getStatus().equals(2)) return R.fail("已准备，请勿重复操作。");
                     if (ObjectUtil.isEmpty(seat.ready())) return R.fail("座位状态（0）异常。");
                     updateById(fight);
@@ -946,7 +960,7 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
                     if (!mapR.getCode().equals(200)) {
                         seat.readyCancel().sitUp();
                         updateById(fight);
-                        log.warn("对战{},用户{}加入扣款异常，踢出座位{}。",fightId,player.getUserId(),seat.getCode());
+                        log.warn("对战{},用户{}加入扣款异常，踢出座位{}。", fightId, player.getUserId(), seat.getCode());
                         return mapR;
                     }
 
@@ -959,7 +973,8 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
                             .updateTime(new Date())
                             .build();
                     fightUserService.save(build);
-                } catch (Exception e){
+
+                } catch (Exception e) {
                     seat.readyCancel().sitUp();
                     updateById(fight);
                     e.printStackTrace();
@@ -968,29 +983,12 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
                 }
 
 
-                // List<FightSeat> seats = fight.getSeats();
-                // List<TtFightUser> fightUsers = new ArrayList<>();
-                // for (int i = 0; i < seats.size(); i++) {
-                //
-                //     FightSeat seat1 = seats.get(i);
-                //
-                //     if (seat1.getPlayerId().equals(fight.getUserId())) {
-                //         continue;
-                //     }
-                //     TtFightUser build = TtFightUser.builder()
-                //             .fightId(fightId)
-                //             .userId(seat1.getPlayerId())
-                //             .build();
-                //     fightUsers.add(build);
-                // }
-                // fightUserService.saveBatch(fightUsers);
-
                 // 广播房间消息
                 CompletableFuture.runAsync(() -> {
                     WsFightRoom.broadcastFight(fightId, WsResult.ok(FIGHT_ROOM_INFO.name(), fight));
                 }, customThreadPoolExecutor);
 
-                flag = true;
+
                 return R.ok();
             }
         }
@@ -1006,41 +1004,41 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
                 .eq(TtFight::getStatus, 0)
                 .one();
 
-        List<FightSeat> seats = JSONUtil.toList(JSONUtil.toJsonStr(fight.getSeats()), FightSeat.class);
 
         //排除观战
         AtomicBoolean gz = new AtomicBoolean(true);
-        seats.forEach(seat->{
-            if (player.getUserId().equals(seat.getPlayerId())){
+        fight.getSeatList().forEach(seat -> {
+            if (player.getUserId().equals(seat.getPlayerId())) {
                 gz.set(false);
             }
         });
-        if (gz.get()){
+
+        if (gz.get()) {
             return R.ok("退出观战房间！");
         }
 
         //房间内对战玩家校验房间状态
         if (ObjectUtil.isEmpty(fight)) return R.fail("对局已开始，不能退出。");
 
-        for (int i = 0; i < seats.size(); i++) {
+        for (FightSeat seat : fight.getSeatList()) {
 
-            Integer playerId = seats.get(i).getPlayerId();
+            Integer playerId = seat.getPlayerId();
             if (ObjectUtil.isEmpty(playerId)) {
                 continue;
             }
 
             if (playerId.equals(player.getUserId())) {
-                if (seats.get(i).getStatus().equals(2)) {
-                    // seat.sitUp();
-                    // updateById(fight);
-                    // //广播房间消息
-                    // CompletableFuture.runAsync(() -> {
-                    //     WsFightRoom.broadcast(WsResult.ok(FIGHT_ROOM_INFO.name(), fight));
-                    // }, customThreadPoolExecutor);
+
+                if (seat.getStatus().equals(2)) {
+
                     return R.ok("退出成功，消费不退回。");
-                } else if (seats.get(i).getStatus().equals(1)) {
-                    if (!seats.get(i).sitUp()) return R.fail("退出失败，请稍后重试。");
-                    fight.setSeats(seats);
+
+                } else if (seat.getStatus().equals(1)) {
+
+                    if (!seat.sitUp()) return R.fail("退出失败，请稍后重试。");
+
+                    fight.setSeats(JSONUtil.toJsonStr(fight.getSeatList()));
+
                     updateById(fight);
                     // 广播房间消息
                     CompletableFuture.runAsync(() -> {
@@ -1051,7 +1049,9 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
                         WsFightHall.broadcast(WsResult.ok(ALL_FIGHT_ROOM.name(), list, "对战房间最新信息"));
                         WsFightRoom.broadcast(WsResult.ok(FIGHT_ROOM_INFO.name(), fight));
                     }, customThreadPoolExecutor);
+
                     return R.ok("退出成功。");
+
                 } else {
                     return R.fail("异常的座位状态0");
                 }
@@ -1066,6 +1066,7 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
     public List<ApiFightListDataVO> getFightList(FightOnMyOwnParam param) {
 
         Page<TtFight> pageInfo = new Page<>(param.getPage(), param.getSize());
+
         pageInfo.setOptimizeCountSql(false);
 
         LambdaQueryWrapper<TtFight> wrapper = new LambdaQueryWrapper<>();
@@ -1086,14 +1087,16 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
         wrapper.orderByDesc(TtFight::getCreateTime);
 
         List<TtFight> page = this.page(pageInfo, wrapper).getRecords();
+
         return page.stream().map(fight -> {
             ApiFightListDataVO build = ApiFightListDataVO.builder().build();
             BeanUtil.copyProperties(fight, build);
             build.setBoxData(JSONUtil.toJsonStr(fight.getBoxData()));
-            build.setSeats(fight.getSeats());
+            build.setSeats(fight.getSeatList());
             build.setRoundNumber(fight.getRoundNumber());
             return build;
         }).collect(Collectors.toList());
+
     }
 
     @Override
@@ -1130,7 +1133,6 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
         queryWrapper.clear();
         queryWrapper
                 .le(TtFight::getCreateTime, createTime)
-                // .and(qw->qw.eq(TtFight::getStatus,0))
                 .eq(TtFight::getStatus, 0);
 
         pageInfo = this.page(pageInfo, queryWrapper);
@@ -1166,6 +1168,7 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
 
         // 扣款
         BigDecimal totalMoney = fight.getBoxPriceTotal();
+
         R<Map<String, BigDecimal>> mapR = deductMoney(totalMoney, player);
         if (!mapR.getCode().equals(200)) {
             return mapR;
@@ -1201,10 +1204,10 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
                     .updateTime(new Timestamp(System.currentTimeMillis()))
                     .build();
 
-            if (blendErcash.getFinalAmount() != null && BigDecimal.ZERO.compareTo(blendErcash.getFinalAmount()) > 0){
+            if (blendErcash.getFinalAmount() != null && BigDecimal.ZERO.compareTo(blendErcash.getFinalAmount()) > 0) {
                 blendErcash.setFinalAmount(BigDecimal.ZERO);
             }
-            if (blendErcash.getFinalCredits() != null && BigDecimal.ZERO.compareTo(blendErcash.getFinalCredits()) > 0){
+            if (blendErcash.getFinalCredits() != null && BigDecimal.ZERO.compareTo(blendErcash.getFinalCredits()) > 0) {
                 blendErcash.setFinalCredits(BigDecimal.ZERO);
             }
 
@@ -1250,8 +1253,8 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
 
         // 计算结果
         ArrayList<TtBoxRecords> result = new ArrayList<>();
-        List<FightSeat> seats = fight.getSeats();
-        for (FightSeat seat : seats) {
+
+        for (FightSeat seat : fight.getSeatList()) {
             TtUser player = userService.getById(seat.getPlayerId());
             List<TtBoxRecords> ttBoxRecords = apiBindBoxService.openBoxArithmetic(fight.getId(), player, box, number);
             // 补充图片
@@ -1264,67 +1267,54 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
         return result;
     }
 
-    public List<TtBoxRecords> computerFight1(TtFight fight) {
-
-        List<TtBoxRecords> result = new ArrayList<>();
-
-        List<FightSeat> seats = fight.getSeats();
-        Map<String, FightBoxVO> boxs = fight.getBoxData();
-        for (FightSeat seat : seats) {
-            Integer roundNumber = 1;
-            for (String boxId : boxs.keySet()) {
-                TtBox box = boxMapper.selectById(boxId);
-                // 一种箱子一个人的所有结果
-                TtUser player = userService.getById(seat.getPlayerId());
-                List<TtBoxRecords> ttBoxRecords = apiBindBoxService.openBoxArithmetic(fight.getId(), player, box, boxs.get(boxId).getNumber());
-                // 补充图片
-                for (TtBoxRecords boxRecord : ttBoxRecords) {
-                    TtOrnament ornament = ttOrnamentsZBTService.getById(boxRecord.getOrnamentId());
-                    boxRecord.setImageUrl(ornament.getImageUrl());
-                    boxRecord.setFightRoundNumber(roundNumber);
-                    roundNumber++;
-                }
-                result.addAll(ttBoxRecords);
-            }
-        }
-
-        return result;
-    }
 
     // 新开箱算法
     public List<TtBoxRecords> newComputerFight(TtFight fight) {
 
         List<TtBoxRecords> result = new ArrayList<>();
 
-        Map<String, FightBoxVO> boxs = fight.getBoxData();
+
         // 抽奖人列表
         ArrayList<Integer> userList = new ArrayList<>();
-        for (FightSeat seat : fight.getSeats()) {
+
+
+        for (FightSeat seat : fight.getSeatList()) {
+
+            if (ObjectUtil.isEmpty(seat.getPlayerId())) continue;
+
             userList.add(seat.getPlayerId());
         }
 
         Integer round = 1;
-        for (String boxId : boxs.keySet()) {
+
+        for (String boxId : fight.getBoxDataMap().keySet()) {
             // 获取宝箱详细信息
             TtBox box = boxMapper.selectById(boxId);
-            for (int i = 0; i < boxs.get(boxId).getNumber(); i++) {
+
+            for (int i = 0; i < fight.getBoxDataMap().get(boxId).getNumber(); i++) {
+
                 // 一个宝箱一回合
                 List<TtBoxRecords> roundResult = roundLottery(round, box, userList, fight);
+
                 if (ObjectUtil.isEmpty(roundResult) || roundResult.isEmpty()) return null;
+
                 result.addAll(roundResult);
+
                 round++;
             }
 
             // 统计宝箱历史开箱数量
             new LambdaUpdateChainWrapper<>(boxMapper)
                     .eq(TtBox::getBoxId, boxId)
-                    .set(TtBox::getOpenNum, box.getOpenNum() + boxs.get(boxId).getNumber())
+                    .set(TtBox::getOpenNum, box.getOpenNum() + fight.getBoxDataMap().get(boxId).getNumber())
                     .update();
         }
 
         // 补充信息
         result.stream().forEach(item -> {
+
             item.setFightId(fight.getId());
+
         });
 
         // 保存信息
@@ -1357,6 +1347,7 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
 
         //判断对局是否存在机器人
         String rebootIds = configService.selectConfigByKey("fightRebootIds");
+
         boolean isRebootFight = isAnyElementInListString(rebootIds, userList);
 
         // 循环所有人
@@ -1365,8 +1356,8 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
             TtUser user = userService.getById(uid);
 
             //如果用户存在机器人并且是非酋模式（互换游戏类玩家的爆率，主播爆率变玩家，玩家爆率变主播）
-            if (isRebootFight && fight.getModel().equals("1")){
-                if (user.getUserType().equals("01")){
+            if (isRebootFight && fight.getModel().equals("1")) {
+                if (user.getUserType().equals("01")) {
                     user.setUserType("02");
                 } else if (user.getUserType().equals("02")) {
                     user.setUserType("01");
@@ -1376,8 +1367,11 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
 
             // 抽奖
             String ornamentId = lotteryMachine.singleLottery(user, box);
+
             if (StringUtils.isBlank(ornamentId)) {
+
                 log.warn("用户{}抽奖失败", user.getUserId());
+
                 return null;
             }
 
@@ -1408,6 +1402,7 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
                     // .isShow(0)
                     .status(IN_PACKSACK_OFF.getCode())
                     .build();
+
             result.add(boxRecord);
 
         }
