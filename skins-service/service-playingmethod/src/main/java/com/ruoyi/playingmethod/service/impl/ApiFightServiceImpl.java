@@ -1854,7 +1854,8 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
                         .eq(TtBoxRecords::getFightId, ttFight.getId())
                         .list();
 
-                Map<String, FightBoxVO> boxDataJsonString = ttFight.getBoxData();
+                Map<String, FightBoxVO> boxDataJsonString = ttFight.getBoxDataMap();
+
                 if (StringUtils.isEmpty(boxDataJsonString)) return;
 
                 List<BoxDataBodyA> boxDataList = JSONObject.parseObject(JSON.toJSONString(boxDataJsonString), new TypeReference<List<BoxDataBodyA>>() {
