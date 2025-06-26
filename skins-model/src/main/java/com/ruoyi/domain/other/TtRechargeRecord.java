@@ -1,5 +1,6 @@
 package com.ruoyi.domain.other;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -27,10 +28,11 @@ public class TtRechargeRecord implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @Excel(name = "充值记录ID")
-    @TableId
+    @TableId(type = IdType.AUTO)
     private Integer id;
 
     @Excel(name = "用户ID")
+    @TableField("user_id")
     private Integer userId;
 
     @Excel(name = "上级用户ID")
@@ -46,6 +48,7 @@ public class TtRechargeRecord implements Serializable {
     private BigDecimal finallyPrice;
 
     @Excel(name = "订单号")
+    @TableField("order_id")
     private String orderId;
 
     @Excel(name = "外部订单号")
