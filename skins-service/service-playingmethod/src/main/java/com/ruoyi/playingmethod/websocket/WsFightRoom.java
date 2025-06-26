@@ -125,7 +125,7 @@ public class WsFightRoom {
             if (fight.getStatus().equals(2) || fight.getStatus().equals(3)) {
                 // 构建结果集
                 // 根据宝箱id查询关联的所有饰品
-                Map<String, FightBoxVO> boxData = fight.getBoxData();
+                Map<String, FightBoxVO> boxData = fight.getBoxDataMap();
                 ArrayList<FightBoxVO> fightBoxVOList = new ArrayList<>();
                 boxData.keySet().forEach(boxId -> {
                     fightBoxVOList.add(boxData.get(boxId));
@@ -140,7 +140,7 @@ public class WsFightRoom {
                 FightResultVO resultVO = FightResultVO.builder()
                         .currentRound(-1L)
                         .fight(fight)
-                        .winnerIds(fight.getWinnerIds())
+                        .winnerIds(fight.getWinnerList())
                         .fightResult(allBoxRecords)
                         .fightBoxVOList(fightBoxVOList)
                         .build();
@@ -152,7 +152,7 @@ public class WsFightRoom {
 
                 // 构建结果集
                 // 根据宝箱id查询关联的所有饰品
-                Map<String, FightBoxVO> boxData = fight.getBoxData();
+                Map<String, FightBoxVO> boxData = fight.getBoxDataMap();
 
                 ArrayList<FightBoxVO> fightBoxVOList = new ArrayList<>();
                 boxData.keySet().forEach(boxId -> {
@@ -194,7 +194,7 @@ public class WsFightRoom {
                 FightResultVO resultVO = FightResultVO.builder()
                         .currentRound(currentRound.longValue())
                         .fight(fight)
-                        .winnerIds(fight.getWinnerIds())
+                        .winnerIds(fight.getWinnerList())
                         .fightResult(allBoxRecords)
                         .fightBoxVOList(fightBoxVOList)
                         .build();
@@ -349,7 +349,7 @@ public class WsFightRoom {
      * 断开房间所有连接
      */
     public static Boolean batchClose(TtFight fight) {
-        List<FightSeat> seats = fight.getSeats();
+        List<FightSeat> seats = fight.getSeatList();
 
         for (int i = 0; i < seats.size(); i++) {
             FightSeat seat = JSONUtil.toBean(JSONUtil.toJsonStr(seats.get(i)), FightSeat.class);

@@ -93,7 +93,7 @@ public class RebootTask {
 
         //如果是三人房并且房间目前只有一个人的情况下只需要添加一个机器人
         if (fight.getPlayerNum() == 3){
-            if (fight.getSeats().size() == 1){
+            if (fight.getSeatList().size() == 1){
                 joinOneReboot(fight, reboot);
                 log.info("三人对战房间，先添加一个机器人【{}】", reboot.getUserId());
                 return;
@@ -101,8 +101,8 @@ public class RebootTask {
 
             //如果是三人并且已经有两个人，需要判断之前的机器人不是当前随机的机器人
             boolean repeatFlag = false;
-            if (fight.getSeats().size() == 2){
-                for (FightSeat seat : fight.getSeats()) {
+            if (fight.getSeatList().size() == 2){
+                for (FightSeat seat : fight.getSeatList()) {
                     if (seat.getPlayerId().equals(reboot.getUserId())){
                         repeatFlag = true;
                     }

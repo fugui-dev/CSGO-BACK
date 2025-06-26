@@ -74,7 +74,7 @@ public class TtFightResultServiceImpl extends ServiceImpl<TtFightResultMapper, T
                 .eq(TtBoxRecords::getFightId, fightId);
         List<TtBoxRecords> allBoxRecords = boxRecordsService.list(boxRecordsQuery);
 
-        Map<String, FightBoxVO> boxData = fight.getBoxData();
+        Map<String, FightBoxVO> boxData = fight.getBoxDataMap();
         ArrayList<FightBoxVO> fightBoxVOList = new ArrayList<>();
         boxData.keySet().forEach(boxId -> {
             fightBoxVOList.add(boxData.get(boxId));
@@ -82,7 +82,7 @@ public class TtFightResultServiceImpl extends ServiceImpl<TtFightResultMapper, T
 
         FightResultVO resultVO = FightResultVO.builder()
                 .fight(fight)
-                .winnerIds(fight.getWinnerIds())
+                .winnerIds(fight.getWinnerList())
                 .fightResult(allBoxRecords)
                 .fightBoxVOList(fightBoxVOList)
                 .build();

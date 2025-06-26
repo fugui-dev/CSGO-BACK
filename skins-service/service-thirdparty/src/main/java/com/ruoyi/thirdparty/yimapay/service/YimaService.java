@@ -221,7 +221,7 @@ public class YimaService {
         try {
             // 查询订单信息
             order = new LambdaQueryChainWrapper<>(orderMapper)
-                    .eq(TtOrder::getOutTradeNo, data.getOut_trade_no())
+                    .eq(TtOrder::getOrderId, data.getOut_trade_no())
                     .eq(TtOrder::getStatus, PayOrderStatus.NO_PAY.getCode())
                     .one();
 
