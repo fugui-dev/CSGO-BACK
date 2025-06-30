@@ -430,10 +430,7 @@ public class ApiFightController extends BaseController {
     public R<FightResultDataVO> getFightRecord(@RequestParam(value = "fightId", required = false) Integer fightId,
                                                @RequestParam(value = "round", required = false) Integer round,
                                                @RequestParam(value = "rounds", required = false) Integer rounds) {
-        // System.out.println("=========================获取当前回合开箱结果=============================");
-        // System.out.println("fightId:" + fightId);
-        // System.out.println("round:" + round);
-        // System.out.println("rounds:" + rounds);
+
 
         log.info("获取当前回合开箱结果 api /{} 参数fightId{} round{} rounds{}", "getFightRecord", fightId, round, rounds);
 
