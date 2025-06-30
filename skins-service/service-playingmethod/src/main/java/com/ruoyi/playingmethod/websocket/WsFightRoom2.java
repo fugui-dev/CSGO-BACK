@@ -113,7 +113,7 @@ public class WsFightRoom2 {
         if (ttFight.getStatus() == 2) {
             // 构建结果集
             // 根据宝箱ID查询关联的所有饰品
-            Map<String, FightBoxVO> boxData = ttFight.getBoxData();
+            Map<String, FightBoxVO> boxData = ttFight.getBoxDataMap();
             ArrayList<FightBoxVO> fightBoxVOList = new ArrayList<>();
             boxData.keySet().forEach(boxId -> {
                 fightBoxVOList.add(boxData.get(boxId));
@@ -129,7 +129,7 @@ public class WsFightRoom2 {
             FightResultVO resultVO = FightResultVO.builder()
                     .currentRound(-1L)
                     .fight(ttFight)
-                    .winnerIds(ttFight.getWinnerIds())
+                    .winnerIds(ttFight.getWinnerList())
                     .fightResult(allBoxRecords)
                     .fightBoxVOList(fightBoxVOList)
                     .build();
@@ -140,7 +140,7 @@ public class WsFightRoom2 {
         } else if (ttFight.getStatus() == 1) {
             // 构建结果集
             // 根据宝箱ID查询关联的所有饰品
-            Map<String, FightBoxVO> boxData = ttFight.getBoxData();
+            Map<String, FightBoxVO> boxData = ttFight.getBoxDataMap();
             ArrayList<FightBoxVO> fightBoxVOList = new ArrayList<>();
             boxData.keySet().forEach(boxId -> {
                 List<TtBoxOrnamentsDataVO> boxOrnamentsVOS = ttBoxOrnamentsMapper.selectTtBoxOrnamentsList(Integer.valueOf(boxId));
@@ -168,7 +168,7 @@ public class WsFightRoom2 {
             FightResultVO resultVO = FightResultVO.builder()
                     .currentRound(currentRound)
                     .fight(ttFight)
-                    .winnerIds(ttFight.getWinnerIds())
+                    .winnerIds(ttFight.getWinnerList())
                     .fightResult(allBoxRecords)
                     .fightBoxVOList(fightBoxVOList)
                     .build();
