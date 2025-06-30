@@ -43,6 +43,11 @@ public class GameRoom {
      * 游戏开始时间
      */
     private Date startTime;
+
+    /**
+     * 游戏结束时间
+     */
+    private Date endTime;
     
     /**
      * 参与玩家列表
@@ -90,6 +95,39 @@ public class GameRoom {
      * 是否允许观战
      */
     private boolean allowSpectators = true;
+
+    /**
+     * 房间总价值（所有盲盒的总价值）
+     */
+    private BigDecimal totalValue;
+
+    /**
+     * 胜利者ID列表
+     */
+    private List<String> winnerIds = new ArrayList<>();
+
+    /**
+     * 观战玩家列表
+     */
+    private Map<String, GamePlayer> spectators = new ConcurrentHashMap<>();
+
+    /**
+     * 每回合的胜利者
+     * Map<回合数, List<玩家ID>>
+     */
+    private Map<Integer, List<String>> roundWinners = new ConcurrentHashMap<>();
+
+    /**
+     * 每回合的失败者
+     * Map<回合数, List<玩家ID>>
+     */
+    private Map<Integer, List<String>> roundLosers = new ConcurrentHashMap<>();
+
+    /**
+     * 每回合的饰品价值
+     * Map<回合数, Map<玩家ID, 价值>>
+     */
+    private Map<Integer, Map<String, BigDecimal>> roundValues = new ConcurrentHashMap<>();
     
     /**
      * 箱子配置
@@ -130,6 +168,7 @@ public class GameRoom {
     
     /**
      * 计算总回合数
+     * 每个箱子的count代表这个箱子要开几回合
      */
     public void calculateTotalRounds() {
         totalRounds = boxConfigs.stream()
@@ -157,5 +196,29 @@ public class GameRoom {
         for (GamePlayer player : players.values()) {
             playerOpeningStatus.put(player.getUserId(), false);
         }
+    }
+
+    /**
+     * 记录回合结果
+     */
+    public void recordRoundResult(int round, List<String> winners, List<String> losers, Map<String, BigDecimal> values) {
+        roundWinners.put(round, winners);
+        roundLosers.put(round, losers);
+        roundValues.put(round, values);
+    }
+
+    /**
+     * 获取当前回合的箱子配置
+     */
+    public BoxConfig getCurrentBoxConfig() {
+        int roundCount = 0;
+        for (BoxConfig config : boxConfigs) {
+            int boxRounds = config.getCount(); // 这个箱子要开几回合
+            roundCount += boxRounds;
+            if (currentRound <= roundCount) {
+                return config;
+            }
+        }
+        return null;
     }
 } 

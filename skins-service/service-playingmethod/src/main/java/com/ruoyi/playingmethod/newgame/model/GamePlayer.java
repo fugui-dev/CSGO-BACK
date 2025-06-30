@@ -41,6 +41,18 @@ public class GamePlayer {
     private boolean robot;
     
     /**
+     * 是否是房主
+     */
+    private boolean owner;
+
+    /**
+     * 队伍编号（用于2V2模式）
+     * 1: 队伍1
+     * 2: 队伍2
+     */
+    private int teamNumber;
+    
+    /**
      * 从TtUser创建GamePlayer
      */
     public static GamePlayer fromTtUser(TtUser user, int seatNumber) {
@@ -51,6 +63,10 @@ public class GamePlayer {
         player.setSeatNumber(seatNumber);
         player.setReady(false);
         player.setRobot(false);
+        player.setOwner(false);
+        // 根据座位号设置队伍（2V2模式）
+        // 座位1,2为队伍1，座位3,4为队伍2
+        player.setTeamNumber(seatNumber <= 2 ? 1 : 2);
         return player;
     }
     
@@ -63,6 +79,8 @@ public class GamePlayer {
         player.setSeatNumber(seatNumber);
         player.setRobot(true);
         player.setReady(true);  // 机器人自动准备
+        // 根据座位号设置队伍（2V2模式）
+        player.setTeamNumber(seatNumber <= 2 ? 1 : 2);
         return player;
     }
 } 

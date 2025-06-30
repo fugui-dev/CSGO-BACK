@@ -68,15 +68,20 @@ public class GameConstants {
     /**
      * WebSocket消息类型
      */
-    public static final String WS_TYPE_ROOM_UPDATE = "ROOM_UPDATE";
-    public static final String WS_TYPE_PLAYER_JOIN = "PLAYER_JOIN";
-    public static final String WS_TYPE_PLAYER_READY = "PLAYER_READY";
-    public static final String WS_TYPE_PLAYER_LEAVE = "PLAYER_LEAVE";
-    public static final String WS_TYPE_GAME_START = "GAME_START";
-    public static final String WS_TYPE_BOX_OPENING = "BOX_OPENING";
-    public static final String WS_TYPE_BOX_RESULT = "BOX_RESULT";
-    public static final String WS_TYPE_GAME_END = "GAME_END";
-    public static final String WS_TYPE_SPECTATOR_JOIN = "SPECTATOR_JOIN";
+    public static final String WS_TYPE_ROOM_UPDATE = "room_update";
+    public static final String WS_TYPE_PLAYER_JOIN = "player_join";
+    public static final String WS_TYPE_PLAYER_LEAVE = "player_leave";
+    public static final String WS_TYPE_PLAYER_READY = "player_ready";
+    public static final String WS_TYPE_GAME_START = "game_start";
+    public static final String WS_TYPE_GAME_END = "game_end";
+    public static final String WS_TYPE_BOX_OPENING = "box_opening";
+    public static final String WS_TYPE_BOX_OPENED = "box_opened";
+    public static final String WS_TYPE_BOX_RESULT = "box_result";
+    public static final String WS_TYPE_ROUND_START = "round_start";
+    public static final String WS_TYPE_ROUND_RESULT = "round_result";
+    public static final String WS_TYPE_ERROR = "error";
+    public static final String WS_TYPE_SPECTATOR_JOIN = "spectator_join";
+    public static final String WS_TYPE_SPECTATOR_LEAVE = "spectator_leave";
     
     /**
      * Redis锁前缀

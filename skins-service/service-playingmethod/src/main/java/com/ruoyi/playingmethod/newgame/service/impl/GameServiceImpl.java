@@ -1,17 +1,20 @@
 package com.ruoyi.playingmethod.newgame.service.impl;
 
+import cn.hutool.core.map.MapUtil;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.ruoyi.admin.service.TtBoxService;
+import com.ruoyi.admin.service.TtOrnamentService;
+import com.ruoyi.admin.service.TtUserService;
 import com.ruoyi.admin.util.core.fight.LotteryMachine;
 import com.ruoyi.common.core.domain.R;
 import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.redis.config.RedisLock;
+import com.ruoyi.domain.entity.TtOrnament;
 import com.ruoyi.domain.entity.sys.TtUser;
 import com.ruoyi.domain.other.TtBox;
 import com.ruoyi.playingmethod.newgame.constants.GameConstants;
 import com.ruoyi.playingmethod.newgame.model.GamePlayer;
 import com.ruoyi.playingmethod.newgame.model.GameRoom;
-import com.ruoyi.playingmethod.newgame.model.message.BoxOpeningMessage;
-import com.ruoyi.playingmethod.newgame.model.message.BoxResultMessage;
 import com.ruoyi.playingmethod.newgame.service.GameHistoryService;
 import com.ruoyi.playingmethod.newgame.service.GameService;
 import com.ruoyi.playingmethod.newgame.websocket.GameWebSocketHandler;
@@ -35,66 +38,57 @@ public class GameServiceImpl implements GameService {
     private final GameHistoryService gameHistoryService;
     private final TtBoxService boxService;
     private final LotteryMachine lotteryMachine;
+    private final TtOrnamentService ornamentService;
+    private final TtUserService userService;
 
-    public GameServiceImpl(RedisCache redisCache, RedisLock redisLock, GameWebSocketHandler webSocketHandler, GameHistoryService gameHistoryService, TtBoxService boxService, LotteryMachine lotteryMachine) {
+    public GameServiceImpl(RedisCache redisCache, RedisLock redisLock, GameWebSocketHandler webSocketHandler, GameHistoryService gameHistoryService, TtBoxService boxService, LotteryMachine lotteryMachine, TtOrnamentService ornamentService, TtUserService userService) {
         this.redisCache = redisCache;
         this.redisLock = redisLock;
         this.webSocketHandler = webSocketHandler;
         this.gameHistoryService = gameHistoryService;
         this.boxService = boxService;
         this.lotteryMachine = lotteryMachine;
+        this.ornamentService = ornamentService;
+        this.userService = userService;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public R<GameRoom> createRoom(TtUser user, int maxPlayers, int mode, int[] boxIds, int[] boxCounts) {
-        // 参数验证
-        if (maxPlayers < GameConstants.MIN_PLAYERS || maxPlayers > GameConstants.MAX_PLAYERS) {
-            return R.fail("玩家数量必须在2-4之间");
-        }
-        if (boxIds == null || boxCounts == null || boxIds.length != boxCounts.length) {
-            return R.fail("箱子配置错误");
-        }
-        if (boxIds.length == 0) {
-            return R.fail("箱子配置不能为空");
+    public R<GameRoom> createRoom(TtUser user, GameRoom room) {
+        // 验证房间配置
+        if (room.getBoxConfigs().size() > 15) {
+            return R.fail("每场最多选择15个盲盒");
         }
         
-        // 验证箱子是否存在并创建配置
-        List<GameRoom.BoxConfig> boxConfigs = new ArrayList<>();
-        for (int i = 0; i < boxIds.length; i++) {
-            TtBox box = boxService.getById(boxIds[i]);
-            if (box == null) {
-                return R.fail("箱子不存在: " + boxIds[i]);
-            }
-            if (boxCounts[i] <= 0) {
-                return R.fail("开箱次数必须大于0");
-            }
-            GameRoom.BoxConfig config = new GameRoom.BoxConfig();
-            config.setBoxId((long) boxIds[i]);
-            config.setCount(boxCounts[i]);
-            boxConfigs.add(config);
+        // 验证玩家数量
+        int playerCount = room.getMaxPlayers();
+        if (playerCount != 2 && playerCount != 3 && playerCount != 4) { // 4用于2V2模式
+            return R.fail("房间人数只能是2人/3人/2V2");
         }
-        
-        // 创建房间
-        GameRoom room = new GameRoom();
-        room.setRoomId(UUID.randomUUID().toString());
+
+        // 计算入场费用（盲盒总价值）
+        BigDecimal totalCost = calculateTotalBoxCost(room.getBoxConfigs());
+
+        //扣费
+        upgradeAccounting(totalCost,user);
+
+        room.setTotalValue(totalCost);
+
+        // 生成房间ID
+        String roomId = generateRoomId();
+        room.setRoomId(roomId);
         room.setStatus(GameConstants.ROOM_STATUS_WAITING);
-        room.setGameMode(mode == 0 ? GameConstants.GAME_MODE_RICH : GameConstants.GAME_MODE_POOR);
-        room.setMaxPlayers(maxPlayers);
-        room.setMinPlayers(GameConstants.MIN_PLAYERS);
-        room.setCreatorId(user.getUserId().toString());
         room.setCreateTime(new Date());
-        room.setBoxConfigs(boxConfigs);
-        room.calculateTotalRounds();
+        room.setPlayers(new HashMap<>());
         
         // 添加创建者为第一个玩家
-        GamePlayer creator = new GamePlayer();
-        creator.setUserId(user.getUserId().toString());
+        GamePlayer creator = GamePlayer.fromTtUser(user, 1);
         creator.setUsername(user.getNickName());
         creator.setAvatar(user.getAvatar());
         creator.setReady(false);
         creator.setRobot(false);
-        creator.setSeatNumber(1);  // 创建者默认坐第一个位置
+        creator.setSeatNumber(1);
+        creator.setOwner(true);
         room.getPlayers().put(creator.getUserId(), creator);
         
         // 保存房间信息到缓存
@@ -106,14 +100,147 @@ public class GameServiceImpl implements GameService {
         redisCache.setCacheObject(userRoomKey, room.getRoomId(), (int) GameConstants.ROOM_EXPIRE_TIME, TimeUnit.MINUTES);
         
         // 广播房间创建消息
-        WsMessage<GameRoom> message = WsMessage.create(
-            GameConstants.WS_TYPE_ROOM_UPDATE,
-            room.getRoomId(),
-            room
-        );
-        webSocketHandler.broadcastToRoom(room, message.getType(), message.getData());
+        webSocketHandler.broadcastToRoom(room, GameConstants.WS_TYPE_ROOM_UPDATE, room);
         
         return R.ok(room);
+    }
+
+    /**
+     * 计算盲盒总价值
+     */
+    private BigDecimal calculateTotalBoxCost(List<GameRoom.BoxConfig> boxConfigs) {
+        BigDecimal totalCost = BigDecimal.ZERO;
+        for (GameRoom.BoxConfig config : boxConfigs) {
+            TtBox box = boxService.getById(config.getBoxId());
+            if (box != null) {
+                totalCost = totalCost.add(box.getPrice().multiply(new BigDecimal(config.getCount())));
+            }
+        }
+        return totalCost;
+    }
+
+    /**
+     * 处理游戏结果
+     */
+    private void handleGameResult(GameRoom room) {
+        // 计算每个玩家的总价值
+        Map<String, BigDecimal> playerValues = new HashMap<>();
+        for (Map.Entry<String, List<String>> entry : room.getPlayerResults().entrySet()) {
+            String playerId = entry.getKey();
+            List<String> ornamentIds = entry.getValue();
+            
+            BigDecimal totalValue = BigDecimal.ZERO;
+            for (String ornamentId : ornamentIds) {
+                // 使用 ornamentService 获取饰品价格
+                TtOrnament ttOrnament = ornamentService.getById(ornamentId);
+                if (ttOrnament != null) {
+                    totalValue = totalValue.add(ttOrnament.getPrice());
+                }
+            }
+            playerValues.put(playerId, totalValue);
+        }
+
+        // 根据游戏模式确定胜利者和失败者
+        List<String> winners = new ArrayList<>();
+        List<String> losers = new ArrayList<>();
+        
+        if (GameConstants.GAME_MODE_RICH.equals(room.getGameMode())) {
+            // 欧皇模式：价值最高的获胜
+            BigDecimal maxValue = playerValues.values().stream().max(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+            for (Map.Entry<String, BigDecimal> entry : playerValues.entrySet()) {
+                if (entry.getValue().compareTo(maxValue) == 0) {
+                    winners.add(entry.getKey());
+                } else {
+                    losers.add(entry.getKey());
+                }
+            }
+        } else {
+            // 非酋模式：价值最低的获胜
+            BigDecimal minValue = playerValues.values().stream().min(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+            for (Map.Entry<String, BigDecimal> entry : playerValues.entrySet()) {
+                if (entry.getValue().compareTo(minValue) == 0) {
+                    winners.add(entry.getKey());
+                } else {
+                    losers.add(entry.getKey());
+                }
+            }
+        }
+
+        // 重新分配饰品
+        redistributeOrnaments(room, winners, losers);
+
+        // 保存游戏结果
+        room.setWinnerIds(winners);
+        room.setStatus(GameConstants.ROOM_STATUS_ENDED);
+        room.setEndTime(new Date());
+
+        // 广播游戏结果
+        Map<String, Object> resultData = new HashMap<>();
+        resultData.put("winners", winners);
+        resultData.put("losers", losers);
+        resultData.put("playerValues", playerValues);
+        resultData.put("room", room);
+        
+        webSocketHandler.broadcastToRoom(room, GameConstants.WS_TYPE_GAME_END, resultData);
+
+        // 保存游戏历史记录
+        gameHistoryService.saveHistory(room);
+    }
+
+    /**
+     * 重新分配饰品
+     */
+    private void redistributeOrnaments(GameRoom room, List<String> winners, List<String> losers) {
+        if (GameConstants.GAME_MODE_RICH.equals(room.getGameMode())) {
+            // 欧皇模式：失败者的饰品分给胜利者
+            List<String> winnerOrnaments = new ArrayList<>(room.getPlayerResults().get(winners.get(0)));
+            for (String loserId : losers) {
+                winnerOrnaments.addAll(room.getPlayerResults().get(loserId));
+                room.getPlayerResults().put(loserId, new ArrayList<>());
+            }
+            // 如果有多个胜利者，平均分配
+            if (winners.size() > 1) {
+                distributeOrnaments(room, winners, winnerOrnaments);
+            } else {
+                room.getPlayerResults().put(winners.get(0), winnerOrnaments);
+            }
+        } else {
+            // 非酋模式：胜利者的饰品分给失败者
+            List<String> loserOrnaments = new ArrayList<>();
+            for (String winnerId : winners) {
+                loserOrnaments.addAll(room.getPlayerResults().get(winnerId));
+                room.getPlayerResults().put(winnerId, new ArrayList<>());
+            }
+            // 平均分配给失败者
+            distributeOrnaments(room, losers, loserOrnaments);
+        }
+    }
+
+    /**
+     * 平均分配饰品
+     */
+    private void distributeOrnaments(GameRoom room, List<String> players, List<String> ornaments) {
+        int playerCount = players.size();
+        if (playerCount == 0 || ornaments.isEmpty()) {
+            return;
+        }
+
+        // 按价值排序饰品
+        ornaments.sort((o1, o2) -> {
+            TtOrnament ornament1 = ornamentService.getById(o1);
+            TtOrnament ornament2 = ornamentService.getById(o2);
+            if (ornament1 == null || ornament2 == null) {
+                return 0;
+            }
+            return ornament2.getPrice().compareTo(ornament1.getPrice());
+        });
+
+        // 平均分配
+        for (int i = 0; i < ornaments.size(); i++) {
+            String playerId = players.get(i % playerCount);
+            room.getPlayerResults().computeIfAbsent(playerId, k -> new ArrayList<>())
+                .add(ornaments.get(i));
+        }
     }
 
     @Override
@@ -139,6 +266,9 @@ public class GameServiceImpl implements GameService {
         if (room.getPlayers().containsKey(String.valueOf(user.getUserId()))) {
             return R.fail("已在房间中");
         }
+
+        //扣费
+        upgradeAccounting(room.getTotalValue(),user);
         
         // 分配座位号
         int seatNumber = 1;
@@ -282,12 +412,13 @@ public class GameServiceImpl implements GameService {
             redisCache.setCacheObject(String.format(GameConstants.ROOM_CACHE_KEY, roomId), room, (int) GameConstants.ROOM_EXPIRE_TIME, TimeUnit.MINUTES);
             
             // 广播游戏开始消息
-            WsMessage<GameRoom> message = WsMessage.create(
-                GameConstants.WS_TYPE_GAME_START,
-                room.getRoomId(),
-                room
-            );
-            webSocketHandler.broadcastToRoom(room, message.getType(), message.getData());
+            Map<String, Object> startData = new HashMap<>();
+            startData.put("room", room);
+            startData.put("totalRounds", room.getTotalRounds());
+            webSocketHandler.broadcastToRoom(room, GameConstants.WS_TYPE_GAME_START, startData);
+
+            // 开始第一轮开箱
+            startNewRound(room);
             
             return R.ok();
         } catch (Exception e) {
@@ -297,25 +428,354 @@ public class GameServiceImpl implements GameService {
     }
 
     /**
-     * 初始化游戏数据
+     * 开始新一轮开箱
      */
-    private void initializeGameData(GameRoom room) {
-        // 初始化当前回合
-        room.setCurrentRound(1);
-        
-        // 初始化玩家开箱状态
+    private void startNewRound(GameRoom room) {
+        // 重置玩家开箱状态
         Map<String, Boolean> openingStatus = new HashMap<>();
         for (String playerId : room.getPlayers().keySet()) {
             openingStatus.put(playerId, false);
         }
         room.setPlayerOpeningStatus(openingStatus);
-        
-        // 初始化玩家结果
-        Map<String, List<String>> results = new HashMap<>();
-        for (String playerId : room.getPlayers().keySet()) {
-            results.put(playerId, new ArrayList<>());
+
+        // 获取当前回合的箱子配置
+        GameRoom.BoxConfig currentBox = getCurrentRoundBox(room);
+        if (currentBox == null) {
+            // 如果没有箱子配置，说明游戏结束
+            handleGameResult(room);
+            return;
         }
-        room.setPlayerResults(results);
+        
+        // 为每个玩家执行开箱
+        for (Map.Entry<String, GamePlayer> entry : room.getPlayers().entrySet()) {
+            String playerId = entry.getKey();
+            GamePlayer player = entry.getValue();
+            
+            // 执行开箱
+            performBoxOpening(room, player, currentBox);
+        }
+
+        // 更新房间信息
+        redisCache.setCacheObject(String.format(GameConstants.ROOM_CACHE_KEY, room.getRoomId()), room);
+    }
+
+    /**
+     * 执行开箱操作
+     */
+    private void performBoxOpening(GameRoom room, GamePlayer player, GameRoom.BoxConfig boxConfig) {
+        try {
+            // 获取箱子信息
+            TtBox box = boxService.getById(boxConfig.getBoxId());
+            if (box == null) {
+                log.error("Box not found: {}", boxConfig.getBoxId());
+                return;
+            }
+
+            // 执行抽奖
+            TtUser tempUser = new TtUser();
+            tempUser.setUserId(Integer.parseInt(player.getUserId()));
+            tempUser.setUserType(player.isRobot() ? "02" : "01");
+            tempUser.setIsAnchorShow(false);
+
+            String ornamentId = lotteryMachine.singleLottery(tempUser, box, player.isRobot());
+
+            if (ornamentId != null) {
+                List<String> playerResults = room.getPlayerResults().computeIfAbsent(player.getUserId(), k -> new ArrayList<>());
+                playerResults.add(ornamentId);
+
+                // 获取饰品信息
+                TtOrnament ornament = ornamentService.getById(ornamentId);
+                if (ornament != null) {
+                    // 创建开箱结果消息
+                    Map<String, Object> resultMessage = new HashMap<>();
+                    resultMessage.put("roomId", room.getRoomId());
+                    resultMessage.put("playerId", player.getUserId());
+                    resultMessage.put("round", room.getCurrentRound());
+                    resultMessage.put("boxId", boxConfig.getBoxId());
+                    resultMessage.put("ornament", ornament);
+                    
+                    // 广播开箱结果
+                    webSocketHandler.broadcastToRoom(room, GameConstants.WS_TYPE_BOX_RESULT, resultMessage);
+                }
+            }
+
+            // 更新玩家开箱状态
+            room.getPlayerOpeningStatus().put(player.getUserId(), true);
+
+            // 检查是否所有玩家都完成开箱
+            if (isAllPlayersFinished(room)) {
+                handleRoundEnd(room);
+            }
+
+        } catch (Exception e) {
+            log.error("Box opening failed for player {} in room {}", player.getUserId(), room.getRoomId(), e);
+        }
+    }
+
+    /**
+     * 处理回合结束
+     */
+    private void handleRoundEnd(GameRoom room) {
+        try {
+            // 计算当前回合的结果
+            Map<String, BigDecimal> currentRoundValues = new HashMap<>();
+            Map<String, List<String>> currentRoundOrnaments = new HashMap<>();
+            
+            // 获取当前回合每个玩家开出的饰品
+            for (Map.Entry<String, List<String>> entry : room.getPlayerResults().entrySet()) {
+                String playerId = entry.getKey();
+                List<String> ornaments = entry.getValue();
+                
+                // 只取最后一个饰品（当前回合开出的）
+                if (!ornaments.isEmpty()) {
+                    String currentOrnamentId = ornaments.get(ornaments.size() - 1);
+                    TtOrnament ttOrnament = ornamentService.getById(currentOrnamentId);
+                    if (ttOrnament != null) {
+                        currentRoundValues.put(playerId, ttOrnament.getPrice());
+                        currentRoundOrnaments.put(playerId, Collections.singletonList(currentOrnamentId));
+                    }
+                }
+            }
+
+            // 确定当前回合的胜利者和失败者
+            List<String> roundWinners = new ArrayList<>();
+            List<String> roundLosers = new ArrayList<>();
+
+            if (room.getMaxPlayers() == 4) {
+                // 2V2模式：计算每个队伍的总价值
+                Map<Integer, BigDecimal> teamValues = new HashMap<>();
+                Map<Integer, List<String>> teamPlayers = new HashMap<>();
+
+                // 计算每个队伍的总价值和玩家列表
+                for (Map.Entry<String, GamePlayer> entry : room.getPlayers().entrySet()) {
+                    String playerId = entry.getKey();
+                    GamePlayer player = entry.getValue();
+                    int teamNumber = player.getTeamNumber();
+                    
+                    // 累加队伍价值
+                    BigDecimal playerValue = currentRoundValues.getOrDefault(playerId, BigDecimal.ZERO);
+                    teamValues.merge(teamNumber, playerValue, BigDecimal::add);
+                    
+                    // 记录队伍玩家
+                    teamPlayers.computeIfAbsent(teamNumber, k -> new ArrayList<>()).add(playerId);
+                }
+
+                if (GameConstants.GAME_MODE_RICH.equals(room.getGameMode())) {
+                    // 欧皇模式：总价值高的队伍获胜
+                    BigDecimal team1Value = teamValues.getOrDefault(1, BigDecimal.ZERO);
+                    BigDecimal team2Value = teamValues.getOrDefault(2, BigDecimal.ZERO);
+                    
+                    if (team1Value.compareTo(team2Value) >= 0) {
+                        roundWinners.addAll(teamPlayers.get(1));
+                        roundLosers.addAll(teamPlayers.get(2));
+                    } else {
+                        roundWinners.addAll(teamPlayers.get(2));
+                        roundLosers.addAll(teamPlayers.get(1));
+                    }
+                } else {
+                    // 非酋模式：总价值低的队伍获胜
+                    BigDecimal team1Value = teamValues.getOrDefault(1, BigDecimal.ZERO);
+                    BigDecimal team2Value = teamValues.getOrDefault(2, BigDecimal.ZERO);
+                    
+                    if (team1Value.compareTo(team2Value) <= 0) {
+                        roundWinners.addAll(teamPlayers.get(1));
+                        roundLosers.addAll(teamPlayers.get(2));
+                    } else {
+                        roundWinners.addAll(teamPlayers.get(2));
+                        roundLosers.addAll(teamPlayers.get(1));
+                    }
+                }
+            } else {
+                // 2人或3人模式：按个人价值判断
+                if (GameConstants.GAME_MODE_RICH.equals(room.getGameMode())) {
+                    // 欧皇模式：价值最高的获胜
+                    BigDecimal maxValue = currentRoundValues.values().stream()
+                            .max(BigDecimal::compareTo)
+                            .orElse(BigDecimal.ZERO);
+                    
+                    for (Map.Entry<String, BigDecimal> entry : currentRoundValues.entrySet()) {
+                        if (entry.getValue().compareTo(maxValue) == 0) {
+                            roundWinners.add(entry.getKey());
+                        } else {
+                            roundLosers.add(entry.getKey());
+                        }
+                    }
+                } else {
+                    // 非酋模式：价值最低的获胜
+                    BigDecimal minValue = currentRoundValues.values().stream()
+                            .min(BigDecimal::compareTo)
+                            .orElse(BigDecimal.ZERO);
+                    
+                    for (Map.Entry<String, BigDecimal> entry : currentRoundValues.entrySet()) {
+                        if (entry.getValue().compareTo(minValue) == 0) {
+                            roundWinners.add(entry.getKey());
+                        } else {
+                            roundLosers.add(entry.getKey());
+                        }
+                    }
+                }
+            }
+
+            // 记录回合结果
+            room.recordRoundResult(room.getCurrentRound(), roundWinners, roundLosers, currentRoundValues);
+
+            // 重新分配当前回合的饰品
+            redistributeRoundOrnaments(room, roundWinners, roundLosers, currentRoundOrnaments);
+
+            // 广播回合结果
+            Map<String, Object> roundResult = new HashMap<>();
+            roundResult.put("round", room.getCurrentRound());
+            roundResult.put("winners", roundWinners);
+            roundResult.put("losers", roundLosers);
+            roundResult.put("values", currentRoundValues);
+            roundResult.put("ornaments", currentRoundOrnaments);
+            if (room.getMaxPlayers() == 4) {
+                // 2V2模式：添加队伍信息
+                Map<Integer, BigDecimal> teamValues = new HashMap<>();
+                for (Map.Entry<String, GamePlayer> entry : room.getPlayers().entrySet()) {
+                    String playerId = entry.getKey();
+                    GamePlayer player = entry.getValue();
+                    BigDecimal value = currentRoundValues.getOrDefault(playerId, BigDecimal.ZERO);
+                    teamValues.merge(player.getTeamNumber(), value, BigDecimal::add);
+                }
+                roundResult.put("teamValues", teamValues);
+            }
+            roundResult.put("isLastRound", room.getCurrentRound() >= room.getTotalRounds());
+            webSocketHandler.broadcastToRoom(room, GameConstants.WS_TYPE_ROUND_RESULT, roundResult);
+
+            // 更新当前回合
+            room.setCurrentRound(room.getCurrentRound() + 1);
+
+            // 更新房间信息到缓存
+            redisCache.setCacheObject(String.format(GameConstants.ROOM_CACHE_KEY, room.getRoomId()), room);
+
+            // 检查是否是最后一轮
+            if (room.getCurrentRound() > room.getTotalRounds()) {
+                // 游戏结束，处理最终结果
+                handleGameResult(room);
+            } else {
+                // 延迟一段时间后开始新一轮
+                Thread.sleep(3000); // 延迟3秒
+                
+                // 开始新一轮
+                startNewRound(room);
+            }
+        } catch (InterruptedException e) {
+            log.error("Delay before next round failed for room {}", room.getRoomId(), e);
+            Thread.currentThread().interrupt();
+        } catch (Exception e) {
+            log.error("Handle round end failed for room {}", room.getRoomId(), e);
+            // 尝试恢复游戏状态
+            try {
+                startNewRound(room);
+            } catch (Exception ex) {
+                log.error("Failed to recover game state for room {}", room.getRoomId(), ex);
+                // 如果恢复失败，结束游戏
+                handleGameResult(room);
+            }
+        }
+    }
+
+    /**
+     * 重新分配当前回合的饰品
+     */
+    private void redistributeRoundOrnaments(GameRoom room, List<String> winners, List<String> losers, 
+            Map<String, List<String>> currentRoundOrnaments) {
+        if (GameConstants.GAME_MODE_RICH.equals(room.getGameMode())) {
+            // 欧皇模式：失败者的饰品分给胜利者
+            List<String> winnerOrnaments = new ArrayList<>();
+            
+            // 收集失败者的饰品
+            for (String loserId : losers) {
+                List<String> loserOrnaments = currentRoundOrnaments.get(loserId);
+                if (loserOrnaments != null) {
+                    winnerOrnaments.addAll(loserOrnaments);
+                    // 从玩家总结果中移除这些饰品
+                    room.getPlayerResults().get(loserId).removeAll(loserOrnaments);
+                }
+            }
+            
+            // 分配给胜利者
+            if (winners.size() > 1) {
+                // 多个胜利者平均分配
+                distributeOrnaments(room, winners, winnerOrnaments);
+            } else if (!winners.isEmpty()) {
+                // 单个胜利者获得所有
+                String winnerId = winners.get(0);
+                room.getPlayerResults().get(winnerId).addAll(winnerOrnaments);
+            }
+        } else {
+            // 非酋模式：胜利者的饰品分给失败者
+            List<String> loserOrnaments = new ArrayList<>();
+            
+            // 收集胜利者的饰品
+            for (String winnerId : winners) {
+                List<String> winnerOrnaments = currentRoundOrnaments.get(winnerId);
+                if (winnerOrnaments != null) {
+                    loserOrnaments.addAll(winnerOrnaments);
+                    // 从玩家总结果中移除这些饰品
+                    room.getPlayerResults().get(winnerId).removeAll(winnerOrnaments);
+                }
+            }
+            
+            // 分配给失败者
+            if (!losers.isEmpty()) {
+                distributeOrnaments(room, losers, loserOrnaments);
+            }
+        }
+    }
+
+    /**
+     * 获取当前回合的箱子配置
+     */
+    private GameRoom.BoxConfig getCurrentRoundBox(GameRoom room) {
+        int currentRound = room.getCurrentRound();
+        int roundCount = 0;
+        
+        for (GameRoom.BoxConfig config : room.getBoxConfigs()) {
+            int boxRounds = config.getCount(); // 这个箱子要开几回合
+            roundCount += boxRounds;
+            
+            if (currentRound <= roundCount) {
+                return config;
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * 检查是否所有玩家都完成开箱
+     */
+    private boolean isAllPlayersFinished(GameRoom room) {
+        return room.getPlayerOpeningStatus().values().stream().allMatch(status -> status);
+    }
+
+    /**
+     * 初始化游戏数据
+     */
+    private void initializeGameData(GameRoom room) {
+        // 计算总回合数（所有箱子的count总和）
+        room.setCurrentRound(1);
+        room.calculateTotalRounds(); // 使用GameRoom中的方法计算总回合数
+
+        // 初始化玩家结果
+        room.setPlayerResults(new HashMap<>());
+        for (String playerId : room.getPlayers().keySet()) {
+            room.getPlayerResults().put(playerId, new ArrayList<>());
+        }
+
+        // 初始化开箱状态
+        Map<String, Boolean> openingStatus = new HashMap<>();
+        for (String playerId : room.getPlayers().keySet()) {
+            openingStatus.put(playerId, false);
+        }
+        room.setPlayerOpeningStatus(openingStatus);
+
+        // 初始化回合结果记录
+        room.setRoundWinners(new HashMap<>());
+        room.setRoundLosers(new HashMap<>());
+        room.setRoundValues(new HashMap<>());
     }
 
     @Override
@@ -668,10 +1128,56 @@ public class GameServiceImpl implements GameService {
         return room.isAllPlayersFinished();
     }
 
+    public R<Map<String, BigDecimal>> upgradeAccounting(BigDecimal consumption, TtUser player) {
+
+        // 再次检查余额
+        player = userService.getById(player.getUserId());
+        if (player.getAccountAmount().add(player.getAccountCredits()).compareTo(consumption) < 0) {
+            return R.fail("余额不足");
+        }
+
+        LambdaUpdateWrapper<TtUser> userUpdate = new LambdaUpdateWrapper<>();
+        userUpdate.eq(TtUser::getUserId, player.getUserId());
+
+        Map<String, BigDecimal> map;
+        if (player.getAccountAmount().compareTo(consumption) >= 0) {
+            userUpdate.set(TtUser::getAccountAmount, player.getAccountAmount().subtract(consumption));
+            map = MapUtil.builder("Amount", consumption).map();
+        } else {
+            BigDecimal subtract = consumption.subtract(player.getAccountAmount());
+            userUpdate
+                    .set(TtUser::getAccountAmount, 0)
+                    .set(TtUser::getAccountCredits, player.getAccountCredits().subtract(subtract));
+            map = MapUtil.builder("Amount", player.getAccountAmount()).map();
+            map.put("Credits", subtract);
+        }
+
+        userService.update(userUpdate);
+
+        return R.ok(map);
+    }
+
     private GameRoom getRoom(String roomId) {
         if (roomId == null) {
             return null;
         }
         return redisCache.getCacheObject(String.format(GameConstants.ROOM_CACHE_KEY, roomId));
+    }
+
+    /**
+     * 生成房间ID
+     */
+    private String generateRoomId() {
+        // 生成6位随机数字
+        int randomNum = (int) ((Math.random() * 9 + 1) * 100000);
+        String roomId = String.valueOf(randomNum);
+        
+        // 检查房间ID是否已存在
+        while (redisCache.getCacheObject(String.format(GameConstants.ROOM_CACHE_KEY, roomId)) != null) {
+            randomNum = (int) ((Math.random() * 9 + 1) * 100000);
+            roomId = String.valueOf(randomNum);
+        }
+        
+        return roomId;
     }
 } 

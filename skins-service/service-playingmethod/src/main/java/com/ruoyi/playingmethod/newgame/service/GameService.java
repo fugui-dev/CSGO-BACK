@@ -12,7 +12,7 @@ public interface GameService {
     /**
      * 创建游戏房间
      */
-    R<GameRoom> createRoom(TtUser user, int maxPlayers, int mode, int[] boxIds, int[] boxCounts);
+    R<GameRoom> createRoom(TtUser user, GameRoom room);
     
     /**
      * 加入房间
