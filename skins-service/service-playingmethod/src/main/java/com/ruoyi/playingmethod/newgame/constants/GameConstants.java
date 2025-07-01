@@ -125,4 +125,14 @@ public class GameConstants {
      * 库存缓存时间(小时)
      */
     public static final int INVENTORY_CACHE_HOURS = 1;
-} 
+    
+    /**
+     * 游戏开始倒计时(秒)
+     */
+    public static final int GAME_START_COUNTDOWN = 5;
+    
+    /**
+     * WebSocket消息类型 - 倒计时
+     */
+    public static final String WS_TYPE_COUNTDOWN = "countdown";
+}

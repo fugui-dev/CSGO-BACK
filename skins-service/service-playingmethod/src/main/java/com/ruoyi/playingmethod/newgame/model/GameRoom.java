@@ -221,4 +221,20 @@ public class GameRoom {
         }
         return null;
     }
-} 
+    
+    /**
+     * 倒计时剩余秒数
+     */
+    private int countdownSeconds;
+    
+    /**
+     * 是否正在倒计时
+     */
+    private boolean isCountingDown;
+    
+    // 添加getter和setter
+    public int getCountdownSeconds() { return countdownSeconds; }
+    public void setCountdownSeconds(int countdownSeconds) { this.countdownSeconds = countdownSeconds; }
+    public boolean isCountingDown() { return isCountingDown; }
+    public void setCountingDown(boolean countingDown) { isCountingDown = countingDown; }
+}

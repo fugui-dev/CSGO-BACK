@@ -26,6 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -57,6 +59,7 @@ public class GameServiceImpl implements GameService {
     public R<GameRoom> createRoom(TtUser user, GameRoom room) {
         // 验证房间配置
         if (room.getBoxConfigs().size() > 15) {
+            webSocketHandler.broadcastToRoom(room, GameConstants.WS_TYPE_ERROR, "每场最多选择15个盲盒");
             return R.fail("每场最多选择15个盲盒");
         }
         
@@ -191,28 +194,28 @@ public class GameServiceImpl implements GameService {
      * 重新分配饰品
      */
     private void redistributeOrnaments(GameRoom room, List<String> winners, List<String> losers) {
-        if (GameConstants.GAME_MODE_RICH.equals(room.getGameMode())) {
-            // 欧皇模式：失败者的饰品分给胜利者
-            List<String> winnerOrnaments = new ArrayList<>(room.getPlayerResults().get(winners.get(0)));
-            for (String loserId : losers) {
-                winnerOrnaments.addAll(room.getPlayerResults().get(loserId));
-                room.getPlayerResults().put(loserId, new ArrayList<>());
-            }
-            // 如果有多个胜利者，平均分配
-            if (winners.size() > 1) {
-                distributeOrnaments(room, winners, winnerOrnaments);
-            } else {
-                room.getPlayerResults().put(winners.get(0), winnerOrnaments);
-            }
-        } else {
-            // 非酋模式：胜利者的饰品分给失败者
-            List<String> loserOrnaments = new ArrayList<>();
-            for (String winnerId : winners) {
-                loserOrnaments.addAll(room.getPlayerResults().get(winnerId));
-                room.getPlayerResults().put(winnerId, new ArrayList<>());
-            }
-            // 平均分配给失败者
-            distributeOrnaments(room, losers, loserOrnaments);
+        // 获取0.01价值的安慰奖饰品ID
+        String consolationOrnamentId = getConsolationOrnamentId();
+        
+        // 收集所有失败者的饰品
+        List<String> allLoserOrnaments = new ArrayList<>();
+        for (String loserId : losers) {
+            allLoserOrnaments.addAll(room.getPlayerResults().get(loserId));
+            // 给失败者设置安慰奖
+            List<String> consolationList = new ArrayList<>();
+            consolationList.add(consolationOrnamentId);
+            room.getPlayerResults().put(loserId, consolationList);
+        }
+        
+        // 将失败者的饰品分配给胜者（保留胜者原有饰品）
+        if (winners.size() > 1) {
+            // 多个胜者时平均分配失败者饰品
+            distributeOrnaments(room, winners, allLoserOrnaments);
+        } else if (!winners.isEmpty()) {
+            // 单个胜者时直接添加所有失败者饰品
+            List<String> winnerOrnaments = room.getPlayerResults().get(winners.get(0));
+            winnerOrnaments.addAll(allLoserOrnaments);
+            room.getPlayerResults().put(winners.get(0), winnerOrnaments);
         }
     }
 
@@ -314,6 +317,11 @@ public class GameServiceImpl implements GameService {
             return R.fail("游戏已开始,无法退出");
         }
         
+        // 倒计时中不能离开房间
+        if (room.isCountingDown()) {
+            return R.fail("倒计时中，无法离开房间");
+        }
+        
         // 移除玩家
         GamePlayer player = room.getPlayers().remove(user.getUserId().toString());
         if (player == null) {
@@ -370,10 +378,47 @@ public class GameServiceImpl implements GameService {
         
         // 检查是否所有人都准备好了
         if (room.isAllReady() && room.getPlayers().size() >= GameConstants.MIN_PLAYERS) {
-            startGame(user, roomId);
-        }
+                // 启动倒计时
+                startGameCountdown(room);
+            }
         
         return R.ok();
+    }
+
+    /**
+     * 启动游戏开始倒计时
+     */
+    private void startGameCountdown(GameRoom room) {
+        // 设置倒计时状态
+        room.setCountingDown(true);
+        room.setCountdownSeconds(GameConstants.GAME_START_COUNTDOWN);
+        redisCache.setCacheObject(String.format(GameConstants.ROOM_CACHE_KEY, room.getRoomId()), room);
+
+        // 创建倒计时任务
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+        executor.scheduleAtFixedRate(() -> {
+            try {
+                int remaining = room.getCountdownSeconds() - 1;
+                room.setCountdownSeconds(remaining);
+                redisCache.setCacheObject(String.format(GameConstants.ROOM_CACHE_KEY, room.getRoomId()), room);
+
+                // 广播倒计时状态
+                Map<String, Object> countdownData = new HashMap<>();
+                countdownData.put("roomId", room.getRoomId());
+                countdownData.put("remainingSeconds", remaining);
+                webSocketHandler.broadcastToRoom(room, GameConstants.WS_TYPE_COUNTDOWN, countdownData);
+
+                if (remaining <= 0) {
+                    executor.shutdown();
+                    room.setCountingDown(false);
+                    // 倒计时结束，开始游戏
+                    startGame(null, room.getRoomId());
+                }
+            } catch (Exception e) {
+                log.error("Countdown error for room {}", room.getRoomId(), e);
+                executor.shutdown();
+            }
+        }, 0, 1, TimeUnit.SECONDS);
     }
 
     @Override
@@ -1165,6 +1210,15 @@ public class GameServiceImpl implements GameService {
     }
 
     /**
+     * 获取安慰奖饰品ID（价值0.01）
+     */
+    private String getConsolationOrnamentId() {
+        // 实际实现可能需要查询数据库或配置文件
+        // 这里假设存在一个固定ID为"consolation_001"的安慰奖饰品
+        return "consolation_001";
+    }
+
+    /**
      * 生成房间ID
      */
     private String generateRoomId() {
@@ -1180,4 +1234,4 @@ public class GameServiceImpl implements GameService {
         
         return roomId;
     }
-} 
+}
