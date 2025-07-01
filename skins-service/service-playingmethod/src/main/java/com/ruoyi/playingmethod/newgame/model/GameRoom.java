@@ -1,5 +1,6 @@
 package com.ruoyi.playingmethod.newgame.model;
 
+import com.ruoyi.domain.entity.TtOrnament;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -7,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * 游戏房间
@@ -107,6 +109,18 @@ public class GameRoom {
     private List<String> winnerIds = new ArrayList<>();
 
     /**
+     * 失败者ID列表
+     */
+    private List<String> loserIds = new ArrayList<>();
+    
+    /**
+     * 玩家价值统计
+     * key: 玩家ID
+     * value: 总价值
+     */
+    private Map<String, BigDecimal> playerValues = new HashMap<>();
+
+    /**
      * 观战玩家列表
      */
     private Map<String, GamePlayer> spectators = new ConcurrentHashMap<>();
@@ -130,6 +144,28 @@ public class GameRoom {
     private Map<Integer, Map<String, BigDecimal>> roundValues = new ConcurrentHashMap<>();
     
     /**
+     * 当前回合的开箱结果
+     * Map<玩家ID, 饰品信息>
+     */
+    private Map<String, TtOrnament> currentRoundResults = new HashMap<>();
+
+    /**
+     * 所有回合的开箱结果
+     * Map<回合数, Map<玩家ID, 饰品信息>>
+     */
+    private Map<Integer, Map<String, TtOrnament>> allRoundResults = new HashMap<>();
+    
+    /**
+     * 倒计时剩余秒数
+     */
+    private int countdownSeconds;
+    
+    /**
+     * 是否正在倒计时
+     */
+    private boolean isCountingDown;
+
+    /**
      * 箱子配置
      */
     @Data
@@ -144,97 +180,4 @@ public class GameRoom {
          */
         private int count;
     }
-    
-    /**
-     * 检查房间是否已满
-     */
-    public boolean isFull() {
-        return players.size() >= maxPlayers;
-    }
-    
-    /**
-     * 检查是否所有玩家都准备好了
-     */
-    public boolean isAllReady() {
-        return players.values().stream().allMatch(GamePlayer::isReady);
-    }
-    
-    /**
-     * 检查是否可以开始游戏
-     */
-    public boolean canStart() {
-        return players.size() >= minPlayers && isAllReady();
-    }
-    
-    /**
-     * 计算总回合数
-     * 每个箱子的count代表这个箱子要开几回合
-     */
-    public void calculateTotalRounds() {
-        totalRounds = boxConfigs.stream()
-                .mapToInt(BoxConfig::getCount)
-                .sum();
-    }
-    
-    /**
-     * 检查是否所有玩家都完成了当前回合
-     * 机器人玩家自动视为完成
-     */
-    public boolean isAllPlayersFinished() {
-        return players.values().stream()
-                .allMatch(player -> 
-                    player.isRobot() || // 机器人自动视为完成
-                    Boolean.TRUE.equals(playerOpeningStatus.get(player.getUserId())) // 真实玩家需要检查状态
-                );
-    }
-    
-    /**
-     * 重置玩家开箱状态
-     */
-    public void resetOpeningStatus() {
-        playerOpeningStatus.clear();
-        for (GamePlayer player : players.values()) {
-            playerOpeningStatus.put(player.getUserId(), false);
-        }
-    }
-
-    /**
-     * 记录回合结果
-     */
-    public void recordRoundResult(int round, List<String> winners, List<String> losers, Map<String, BigDecimal> values) {
-        roundWinners.put(round, winners);
-        roundLosers.put(round, losers);
-        roundValues.put(round, values);
-    }
-
-    /**
-     * 获取当前回合的箱子配置
-     */
-    public BoxConfig getCurrentBoxConfig() {
-        int roundCount = 0;
-        for (BoxConfig config : boxConfigs) {
-            int boxRounds = config.getCount(); // 这个箱子要开几回合
-            roundCount += boxRounds;
-            if (currentRound <= roundCount) {
-                return config;
-            }
-        }
-        return null;
-    }
-    
-    /**
-     * 倒计时剩余秒数
-     */
-    private int countdownSeconds;
-    
-    /**
-     * 是否正在倒计时
-     */
-    private boolean isCountingDown;
-    
-    // 添加getter和setter
-    public int getCountdownSeconds() { return countdownSeconds; }
-    public void setCountdownSeconds(int countdownSeconds) { this.countdownSeconds = countdownSeconds; }
-    public boolean isCountingDown() { return isCountingDown; }
-    public void setCountingDown(boolean countingDown) { isCountingDown = countingDown; }
 }

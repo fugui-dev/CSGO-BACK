@@ -1,12 +1,12 @@
 package com.ruoyi.playingmethod.newgame.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.ruoyi.domain.entity.game.TtGameBoxConfig;
+import com.ruoyi.domain.entity.game.TtGameBoxRecord;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 游戏箱子配置Mapper接口
+ * 开箱记录Mapper接口
  */
 @Mapper
-public interface TtGameBoxConfigMapper extends BaseMapper<TtGameBoxConfig> {
+public interface TtGameBoxRecordMapper extends BaseMapper<TtGameBoxRecord> {
 } 

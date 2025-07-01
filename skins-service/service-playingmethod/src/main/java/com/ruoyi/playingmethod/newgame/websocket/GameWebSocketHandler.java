@@ -28,8 +28,7 @@ public class GameWebSocketHandler {
 
     private static ObjectMapper objectMapper;
     private static RedisCache redisCache;
-    private static GameService gameService;
-    private static TtBoxService boxService;
+
 
     // 在线用户的WebSocket连接
     private static final Map<String, Session> userSessions = new ConcurrentHashMap<>();
@@ -51,16 +50,6 @@ public class GameWebSocketHandler {
         GameWebSocketHandler.redisCache = redisCache;
     }
 
-    @Autowired
-    public void setGameService(GameService gameService) {
-        GameWebSocketHandler.gameService = gameService;
-    }
-
-    @Autowired
-    public void setBoxService(TtBoxService boxService) {
-        GameWebSocketHandler.boxService = boxService;
-    }
-
     @OnOpen
     public void onOpen(Session session, @PathParam("userId") String userId, @PathParam("roomId") String roomId) {
         this.session = session;
@@ -71,10 +60,8 @@ public class GameWebSocketHandler {
             // 玩家连接
             userSessions.put(userId, session);
             log.info("玩家{}已连接", userId);
-        } else if (roomId != null) {
-            // 观众连接
-            roomSpectators.computeIfAbsent(roomId, k -> ConcurrentHashMap.newKeySet()).add(session);
-            log.info("观众加入房间{}", roomId);
+            
+
         }
     }
 
