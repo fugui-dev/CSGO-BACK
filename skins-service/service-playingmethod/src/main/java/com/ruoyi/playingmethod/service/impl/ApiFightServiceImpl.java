@@ -86,18 +86,12 @@ import static com.ruoyi.playingmethod.websocket.constant.SMsgKey.*;
 
 @Service
 @Slf4j
-// public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> implements ApiFightService {
 public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> implements ApiFightService {
 
 
     @Value("${mkcsgo.fight.roundTime}")
     private final Integer fightRoundTime = null;
 
-    @Autowired
-    private PlatformTransactionManager transactionManager;
-
-    // @Autowired
-    // private TrpageansactionDefinition transactionDefinition;
 
     @Autowired
     private TtBoxRecordsMapper boxRecordsMapper;

@@ -32,11 +32,15 @@ import javax.websocket.*;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -67,6 +71,12 @@ public class WsFightRoom {
     private Integer fightId = null;
     private String key = "";
     private static RedisCache redisCache;
+
+    // 心跳机制相关变量
+    private ScheduledExecutorService heartBeatExecutor;
+    private volatile long lastPongTime; // 添加volatile修饰符保证可见性
+    private static final long HEART_BEAT_INTERVAL = 30 * 1000; // 心跳间隔30秒
+    private static final long HEART_BEAT_TIMEOUT = 60 * 1000; // 超时时间60秒
 
     @Value("${mkcsgo.fight.roundTime}")
     public void ttFightService(Integer fightRoundTime) {
@@ -114,6 +124,49 @@ public class WsFightRoom {
             log.debug("/ws/fight/room > > onOpen");
             log.info("用户{}进入房间{}，" + "在线人数{}", userId, fightId, WsFightRoom.onlineCount);
             sendMsgToPlayers("用户：" + userId + "进入房间，" + fightId + "在线人数" + WsFightRoom.onlineCount, null);
+
+            // 初始化心跳机制
+            // 使用命名线程池，便于问题排查
+            heartBeatExecutor = Executors.newSingleThreadScheduledExecutor(runnable -> {
+                Thread thread = new Thread(runnable);
+                thread.setName("fight-heartbeat-" + userId + "-" + fightId);
+                thread.setDaemon(true); // 设置为守护线程，避免影响JVM退出
+                return thread;
+            });
+            lastPongTime = System.currentTimeMillis();
+
+            // 定时发送ping和检查超时
+            heartBeatExecutor.scheduleAtFixedRate(() -> {
+                try {
+                    if (session == null || !session.isOpen()) {
+                        log.warn("会话已关闭，取消心跳任务");
+                        heartBeatExecutor.shutdownNow();
+                        return;
+                    }
+                    
+                    long now = System.currentTimeMillis();
+                    if (now - lastPongTime > HEART_BEAT_TIMEOUT) {
+                        log.info("用户{} 对战{} 心跳超时，准备关闭连接", userId, fightId);
+                        // 超时，关闭连接
+                        try {
+                            session.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "Heartbeat timeout"));
+                        } catch (IOException e) {
+                            log.error("关闭超时连接失败", e);
+                        }
+                        heartBeatExecutor.shutdownNow();
+                    } else {
+                        // 发送ping
+                        session.getAsyncRemote().sendPing(ByteBuffer.wrap(new byte[0]));
+                        log.debug("发送ping到用户{} 对战{}", userId, fightId);
+                    }
+                } catch (Exception e) {
+                    log.error("用户{} 对战{} 心跳机制异常", userId, fightId, e);
+                    // 发生异常时关闭线程池
+                    if (heartBeatExecutor != null) {
+                        heartBeatExecutor.shutdownNow();
+                    }
+                }
+            }, 0, HEART_BEAT_INTERVAL, TimeUnit.MILLISECONDS);
 
             // 首次连接获取房间最新数据
             LambdaQueryWrapper<TtFight> fightQuery = new LambdaQueryWrapper<>();
@@ -208,6 +261,7 @@ public class WsFightRoom {
                 sendMsgToPlayers(WsResult.ok(SMsgKey.FIGHT_ROOM_INFO.name(), fight, "对局准备中，对战房间最新信息"), null);
                 log.info("room onOpen 广播数据成功。");
             }
+
         } catch (Exception e) {
             e.printStackTrace();
             log.warn("onopen warn");
