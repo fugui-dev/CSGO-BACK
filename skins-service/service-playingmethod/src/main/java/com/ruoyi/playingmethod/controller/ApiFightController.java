@@ -187,7 +187,7 @@ public class ApiFightController extends BaseController {
      */
     @ApiOperation("玩家准备游戏")
     @UpdateUserCache
-    @GetMapping("/seatrReady")
+    @PostMapping("/seatrReady")
     public R seatrReady(@RequestParam("fightId") Integer fightId) {
         String websiteMaintenance = sysConfigService.selectConfigByKey("websiteMaintenance");
         if ("1".equals(websiteMaintenance)) {
@@ -211,7 +211,7 @@ public class ApiFightController extends BaseController {
      * Step4 开始游戏（前端满人自动开始）
      */
     @ApiOperation("开始游戏")
-    @GetMapping("/fightBegin")
+    @PostMapping("/fightBegin")
     public R fightBegin(@RequestParam("fightId") Integer fightId) {
         String websiteMaintenance = sysConfigService.selectConfigByKey("websiteMaintenance");
         if ("1".equals(websiteMaintenance)) {
@@ -254,7 +254,7 @@ public class ApiFightController extends BaseController {
      * 观战
      */
     @ApiOperation("观战")
-    @GetMapping("/audience")
+    @PostMapping("/audience")
     public R audience(@RequestParam("fightId") Integer fightId) {
         String websiteMaintenance = sysConfigService.selectConfigByKey("websiteMaintenance");
         if ("1".equals(websiteMaintenance)) {
@@ -275,7 +275,7 @@ public class ApiFightController extends BaseController {
      * 游戏结束标记
      */
     @ApiOperation("游戏结束标记")
-    @GetMapping("/fightEnd")
+    @PostMapping("/fightEnd")
     public R fightEnd(@RequestParam("fightId") Integer fightId) {
         String websiteMaintenance = sysConfigService.selectConfigByKey("websiteMaintenance");
         if ("1".equals(websiteMaintenance)) return R.fail("网站维护中......");
@@ -365,7 +365,7 @@ public class ApiFightController extends BaseController {
 
     @ApiOperation("获取对战宝箱详情")
     @GetMapping("/simpleBoxDetail")
-    public PageDataInfo<SimpleOrnamentVO> simpleBoxDetail(Integer boxId) {
+    public PageDataInfo<SimpleOrnamentVO> simpleBoxDetail(@RequestParam(value = "boxId") Integer boxId) {
         startPage();
         List<SimpleOrnamentVO> list = boxOrnamentsService.simpleBoxDetail(boxId);
         return getPageData(list);

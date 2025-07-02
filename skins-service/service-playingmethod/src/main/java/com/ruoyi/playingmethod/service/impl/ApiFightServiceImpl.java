@@ -434,6 +434,8 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
 
             // ws广播参加对局玩家信息（异步）
             CompletableFuture.runAsync(() -> {
+                // 广播玩家加入消息
+                WsFightRoom.broadcastFight(fight.getId(), WsResult.ok(PLAYER_JOIN.name(), player, "玩家加入房间"));
                 WsFightRoom.broadcastFight(fight.getId(), WsResult.ok(FIGHT_ROOM_INFO.name(), fight, "对战房间最新信息"));
             }, customThreadPoolExecutor);
 
@@ -606,9 +608,7 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
 
                 resultVO.setFight(newFight);
 
-
                 WsFightRoom.broadcastFight(fightId, WsResult.ok(FIGHT_RESULT.name(), resultVO));
-
 
                 // 推送大厅最新的房间信息
                 LambdaQueryWrapper<TtFight> fightQuery = new LambdaQueryWrapper<>();
@@ -979,6 +979,8 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
 
                 // 广播房间消息
                 CompletableFuture.runAsync(() -> {
+                    // 广播玩家准备消息
+                    WsFightRoom.broadcastFight(fightId, WsResult.ok(PLAYER_READY.name(), player, "玩家已准备"));
                     WsFightRoom.broadcastFight(fightId, WsResult.ok(FIGHT_ROOM_INFO.name(), fight));
                 }, customThreadPoolExecutor);
 

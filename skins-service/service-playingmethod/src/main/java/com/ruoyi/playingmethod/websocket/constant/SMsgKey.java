@@ -12,6 +12,12 @@ public enum SMsgKey {
     // 房间信息
     FIGHT_ROOM_INFO,
 
+    // 玩家加入
+    PLAYER_JOIN,
+
+    // 玩家准备
+    PLAYER_READY,
+
     // 盲盒房间连接第一次数据
     Blind_Box_Init_Data,
 
