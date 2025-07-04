@@ -577,7 +577,6 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
                     .set(TtFight::getBeginTime, new Timestamp(System.currentTimeMillis()));
             update(fightUpdate);
 
-            // transactionManager.commit(transaction);
 
             // 异步推送对局数据
             CompletableFuture.runAsync(() -> {
@@ -760,12 +759,10 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
     @Override
     public R audience(Integer fightId) {
 
-        // TtFight fight = getById(fightId);
         TtFight fight = new LambdaQueryChainWrapper<>(fightMapper).eq(TtFight::getId, fightId).one();
 
         if (ObjectUtil.isNull(fight)) return R.fail("不存在的对局。");
         if (fight.getStatus().equals(0)) return R.fail(601, "对局尚未开始。");
-        // if (!fight.getStatus().equals(2)) return R.fail(602,"对局已结束。");
 
         Long currentRound = -1L;
 
@@ -1372,7 +1369,6 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
             }
 
             // 饰品详情
-            // TtOrnamentsA ornamentsData = bindBoxMapper.getOrnamentsData(box.getBoxId(), Integer.valueOf(hashName), null);
             TtOrnamentsA ornamentsData = bindBoxMapper.ornamentsInfo(box.getBoxId(), ornamentId);
 
             // 抽奖成功，构建开箱记录数据
@@ -1382,7 +1378,6 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
                     .boxName(box.getBoxName())
                     .boxPrice(box.getPrice())
                     .ornamentId(Long.valueOf(ornamentId))
-                    // .marketHashName(ornamentsData.)
                     .ornamentName(ornamentsData.getShortName())
                     .imageUrl(ornamentsData.getImageUrl())
                     .ornamentsPrice(ornamentsData.getUsePrice())
@@ -1390,12 +1385,9 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
                     .ornamentLevelImg(ornamentsData.getLevelImg())
                     .holderUserId(user.getUserId())
                     .source(TtboxRecordSource.FIGHT.getCode())
-                    .status(IN_PACKSACK_ON.getCode())
                     .fightRoundNumber(round)
                     .createTime(new Timestamp(System.currentTimeMillis()))
                     .updateTime(new Timestamp(System.currentTimeMillis()))
-                    // .fightId()   后续补充
-                    // .isShow(0)
                     .status(IN_PACKSACK_OFF.getCode())
                     .build();
 

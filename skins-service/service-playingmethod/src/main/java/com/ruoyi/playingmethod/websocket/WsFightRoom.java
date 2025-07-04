@@ -143,7 +143,7 @@ public class WsFightRoom {
                         heartBeatExecutor.shutdownNow();
                         return;
                     }
-                    
+
                     long now = System.currentTimeMillis();
                     if (now - lastPongTime > HEART_BEAT_TIMEOUT) {
                         log.info("用户{} 对战{} 心跳超时，准备关闭连接", userId, fightId);
@@ -172,7 +172,7 @@ public class WsFightRoom {
             LambdaQueryWrapper<TtFight> fightQuery = new LambdaQueryWrapper<>();
             fightQuery
                     .eq(TtFight::getId, fightId);
-            // .eq(TtFight::getStatus,0);
+
             TtFight fight = apiFightService.getOne(fightQuery);
             // 如果游戏结束，发送结果集数据
             if (fight.getStatus().equals(2) || fight.getStatus().equals(3)) {
@@ -212,7 +212,7 @@ public class WsFightRoom {
                     List<TtBoxOrnamentsDataVO> boxOrnamentsVOS = boxOrnamentsMapper.selectTtBoxOrnamentsList(Integer.valueOf(boxId));
                     FightBoxVO fightBoxVO = JSONUtil.toBean(JSONUtil.toJsonStr(boxData.get(boxId)), FightBoxVO.class);
                     fightBoxVO.setOrnaments(boxOrnamentsVOS);
-                    boxData.put(boxId,fightBoxVO);
+                    boxData.put(boxId, fightBoxVO);
                     fightBoxVOList.add(boxData.get(boxId));
                 });
 
@@ -221,6 +221,7 @@ public class WsFightRoom {
                 boxRecordsQuery
                         .eq(TtBoxRecords::getFightId, fightId)
                         .eq(TtBoxRecords::getStatus, 0);
+
                 // 首先从Redis中查询对战结果，没有则在从数据库中查询
                 List<TtBoxRecords> allBoxRecords;
                 String key = "fight_result:fight_" + fightId;
@@ -230,17 +231,20 @@ public class WsFightRoom {
                     allBoxRecords = boxRecordsService.list(boxRecordsQuery);
                 }
 
-                // 时间差，计算当前进行到第几回合
-                // LocalDateTime now = LocalDateTime.now();
-                // Timestamp beginTime = fight.getBeginTime();
-                // LocalDateTime beginTime1 = beginTime.toLocalDateTime();
-                // Duration duration = Duration.between(beginTime1, now);
-                // Long currentRound = duration.toMillis() / fightRoundTime; // 这个秒要和前端的【每回合时间】同步
 
                 // 获取当前回合数
                 Integer currentRound = 0;
                 FightBoutData fightBoutData = redisCache.getCacheObject("fight_bout_data:fight_" + fightId);
-                if (!Objects.isNull(fightBoutData)) {
+                if (Objects.isNull(fightBoutData)) {
+
+                    LocalDateTime now = LocalDateTime.now();
+                    Timestamp beginTime = fight.getBeginTime();
+                    LocalDateTime beginTime1 = beginTime.toLocalDateTime();
+                    Duration duration = Duration.between(beginTime1, now);
+                    // 修复时间单位不匹配问题，并使用向上取整确保回合数准确
+                    currentRound = (int) Math.ceil((double) duration.getSeconds() / fightRoundTime); // 这个秒要和前端的【每回合时间】同步
+
+                } else {
                     currentRound = fightBoutData.getBoutNum();
                 }
 
