@@ -19,9 +19,11 @@ import com.ruoyi.domain.entity.sys.TtUser;
 import com.ruoyi.domain.other.*;
 import com.ruoyi.domain.vo.ApiFightListDataVO;
 import com.ruoyi.domain.vo.FightResultDataVO;
+import com.ruoyi.domain.vo.TtBoxOrnamentsDataVO;
 import com.ruoyi.domain.vo.fight.FightResultVO;
 import com.ruoyi.domain.vo.upgrade.SimpleOrnamentVO;
 import com.ruoyi.playingmethod.model.vo.ApiFightRankingVO;
+import com.ruoyi.playingmethod.model.vo.TtFightBoxOrnamentsDataVO;
 import com.ruoyi.playingmethod.scheduled.RebootTask;
 import com.ruoyi.playingmethod.service.ApiFightService;
 import com.ruoyi.playingmethod.websocket.WsFightHall;
@@ -365,10 +367,13 @@ public class ApiFightController extends BaseController {
 
     @ApiOperation("获取对战宝箱详情")
     @GetMapping("/simpleBoxDetail")
-    public PageDataInfo<SimpleOrnamentVO> simpleBoxDetail(@RequestParam(value = "boxId") Integer boxId) {
-        startPage();
-        List<SimpleOrnamentVO> list = boxOrnamentsService.simpleBoxDetail(boxId);
-        return getPageData(list);
+    @Anonymous
+    public R<List<TtFightBoxOrnamentsDataVO>> simpleBoxDetail(@RequestParam(value = "boxId") Integer boxId) {
+        List<TtFightBoxOrnamentsDataVO> fightBoxDetail = apiFightService.getFightBoxDetail(boxId);
+        if (ObjectUtil.isEmpty(fightBoxDetail) || fightBoxDetail.isEmpty()) {
+            return R.ok(null, "没有匹配的数据。");
+        }
+        return R.ok(fightBoxDetail);
     }
 
     @ApiOperation("获取对战宝箱")

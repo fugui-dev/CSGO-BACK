@@ -285,13 +285,6 @@ public class LotteryMachine {
                 doTry++;
                 continue;
 
-                // try {
-                //     Thread.sleep(200);
-                //     doTry++;
-                //     continue;
-                // } catch (InterruptedException e) {
-                //     log.warn("抽奖tryLock sleep warn");
-                // }
             }
             break;
         }
