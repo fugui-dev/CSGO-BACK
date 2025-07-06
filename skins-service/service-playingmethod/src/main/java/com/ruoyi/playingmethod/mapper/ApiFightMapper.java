@@ -8,6 +8,7 @@ import com.ruoyi.playingmethod.model.vo.ApiFightRankingVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
@@ -26,4 +27,11 @@ public interface ApiFightMapper {
      * 新 == 》信逻辑改为总流水前50
      */
     List<ApiFightRankingVO> getFightRankingByDate(String date);
+    /**
+     * 获取指定日期的对战排行榜
+     * @param date 日期
+     * @return 对战排行榜列表
+     */
+    BigDecimal getUserTotalAmountByDate(@Param("userId") Long userId, @Param("date") String date);
+
 }

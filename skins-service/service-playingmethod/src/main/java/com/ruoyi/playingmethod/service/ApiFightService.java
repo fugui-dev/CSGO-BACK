@@ -19,6 +19,7 @@ import com.ruoyi.domain.vo.upgrade.SimpleOrnamentVO;
 import com.ruoyi.playingmethod.model.vo.ApiFightRankingVO;
 import com.ruoyi.playingmethod.model.vo.TtFightBoxOrnamentsDataVO;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
@@ -106,8 +107,21 @@ public interface ApiFightService extends IService<TtFight> {
 
     R earlierHistory(FightDetailParam param);
 
-
+    /**
+     * 获取排行榜
+     * @param date
+     * @return
+     */
     List<ApiFightRankingVO> getFightRankingByDate(String date);
+
+
+    /**
+     * 获取用户的对战宝箱总价
+     * @param userId
+     * @param date
+     * @return
+     */
+    BigDecimal getTotalBoxPriceByDate(Long userId,String date);
 
     /**
      * 保存战斗当前回合数

@@ -1220,6 +1220,11 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
     }
 
     @Override
+    public BigDecimal getTotalBoxPriceByDate(Long userId, String date) {
+        return apiFightMapper.getUserTotalAmountByDate(userId, date);
+    }
+
+    @Override
     public R<Boolean> saveFightBoutData(FightBoutData fightBoutData) {
 
         String boutkey = "fight_bout_data:key" + fightBoutData.getFightId();

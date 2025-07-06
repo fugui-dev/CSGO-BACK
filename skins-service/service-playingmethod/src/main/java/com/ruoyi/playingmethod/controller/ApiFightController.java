@@ -455,6 +455,7 @@ public class ApiFightController extends BaseController {
     @Anonymous
     @GetMapping("/fightRanking")
     public AjaxResult getFightBoutNum() {
+
         // 创建日期格式化对象，指定日期格式
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
 
@@ -463,6 +464,9 @@ public class ApiFightController extends BaseController {
         String formattedTodayDate = formatter.format(today);
         List<ApiFightRankingVO> todayFightRanking = apiFightService.getFightRankingByDate(formattedTodayDate);
 
+
+
+
         // 获取昨天日期
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.DATE, -1);
@@ -470,9 +474,22 @@ public class ApiFightController extends BaseController {
         String formattedYesterdayDate = formatter.format(yesterday);
         List<ApiFightRankingVO> yesterdayFightRanking = apiFightService.getFightRankingByDate(formattedYesterdayDate);
 
-        Map<String, List<ApiFightRankingVO>> map = new HashMap<>();
+        Map<String, Object> map = new HashMap<>();
         map.put("todayFightRanking", todayFightRanking);
         map.put("yesterdayFightRanking", yesterdayFightRanking);
+
+        R checkLogin = checkLogin();
+        if (checkLogin.getCode().equals(200)){
+
+            Long userId = ((Long) checkLogin.getData());
+            BigDecimal totalBoxPriceByToday = apiFightService.getTotalBoxPriceByDate(userId, formattedTodayDate);
+
+            map.put("todayTotalBoxPrice", totalBoxPriceByToday);
+
+            BigDecimal totalBoxPriceByDateYesterday = apiFightService.getTotalBoxPriceByDate(userId, formattedYesterdayDate);
+            map.put("yesterdayTotalBoxPrice", totalBoxPriceByDateYesterday);
+        }
+
         return AjaxResult.success(map);
     }
 }

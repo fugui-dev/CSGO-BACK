@@ -124,9 +124,21 @@
                   user_id
               ORDER BY
                   total_amount DESC
-                  LIMIT 50
+                  LIMIT 10
           ) o1
               LEFT JOIN tt_user t1 ON o1.user_id = t1.user_id
   </select>
 
+
+    <select id="getUserTotalAmountByDate" parameterType="map" resultType="java.math.BigDecimal">
+        SELECT
+            ROUND(SUM(abs(IFNULL(amount, 0)) + abs(IFNULL(credits, 0))), 2) AS total_amount
+        FROM
+            tt_user_blend_ercash
+        WHERE
+            type = 0
+          AND `source` IN (2, 4, 8)
+          AND user_id = #{userId}
+          AND create_time BETWEEN CONCAT(#{date}, ' 00:00:00') AND CONCAT(#{date}, ' 23:59:59')
+    </select>
 </mapper>
