@@ -1135,6 +1135,7 @@ public class ApiFightServiceImpl extends ServiceImpl<TtFightMapper, TtFight> imp
             build.setStatus(fight.getStatus().toString());
             build.setBoxPriceTotal(fight.getBoxPriceTotal());
             build.setBoxData(fight.getBoxData());
+            build.setBoxDataMap(fight.getBoxDataMap());
             build.setPlayerNum(fight.getPlayerNum());
             build.setOpenTotalPrice(fight.getOpenTotalPrice());
             build.setSeats(fight.getSeatList());
