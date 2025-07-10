@@ -62,17 +62,17 @@ public class StageRecord {
     /**
      * 用户选择的概率
      */
-    private String data;
+    private Integer data;
 
     /**
      * 对手选择的概率
      */
-    private String opponentData;
+    private Integer opponentData;
 
     /**
      * 开出来的概率
      */
-    private String resultData;
+    private Integer resultData;
 
 
     /**

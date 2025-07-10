@@ -35,12 +35,12 @@ public class Stage {
     /**
      * 阶段开始时间
      */
-    private String startTime;
+    private LocalDateTime startTime;
 
     /**
      * 阶段结束时间
      */
-    private String endTime;
+    private LocalDateTime endTime;
 
     /**
      * 阶段状态(0-未开始,1-进行中,2-已结束)
