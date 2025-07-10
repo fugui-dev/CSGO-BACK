@@ -20,6 +20,11 @@ public class MatchMessageUtils {
     public static final String ROUND_RESULT = "ROUND_RESULT";
     public static final String GROUP_STANDINGS = "GROUP_STANDINGS";
     public static final String PROMOTION_RESULT = "PROMOTION_RESULT";
+    
+    // 队伍消息类型
+    public static final String TEAM_COMPLETE = "TEAM_COMPLETE";
+    public static final String MEMBER_JOIN = "MEMBER_JOIN";
+    public static final String MEMBER_EXAMINE = "MEMBER_EXAMINE";
 
     // 发送比赛开始消息
     public void sendMatchStart(Integer matchId, Object matchInfo) {
@@ -79,5 +84,20 @@ public class MatchMessageUtils {
     // 发送晋级结果消息
     public void sendPromotionResult(Integer matchId, String groupName, Object promotionInfo) {
         MatchWebSocketUsers.broadcastToGroup(matchId, groupName, PROMOTION_RESULT, promotionInfo);
+    }
+
+    // 发送队伍组建完成消息
+    public void sendTeamComplete(Integer matchId, Integer teamId, Object teamInfo) {
+        MatchWebSocketUsers.broadcastToMatch(matchId, TEAM_COMPLETE, teamInfo);
+    }
+
+    // 发送成员加入消息
+    public void sendMemberJoin(Integer matchId, Integer teamId, Object memberInfo) {
+        MatchWebSocketUsers.broadcastToMatch(matchId, MEMBER_JOIN, memberInfo);
+    }
+
+    // 发送成员审核消息
+    public void sendMemberExamine(Integer matchId, Integer teamId, Object examineInfo) {
+        MatchWebSocketUsers.broadcastToMatch(matchId, MEMBER_EXAMINE, examineInfo);
     }
 } 

@@ -117,6 +117,14 @@ public class ApiMatchServiceImpl implements ApiMatchService {
 
         matchUserMapper.insert(matchUser);
 
+        // 发送队伍创建消息
+        Map<String, Object> teamInfo = new HashMap<>();
+        teamInfo.put("teamId", matchTeam.getId());
+        teamInfo.put("name", matchTeam.getName());
+        teamInfo.put("captainUserId", matchTeam.getCaptainUserId());
+        teamInfo.put("memberCount", matchTeam.getMemberCount());
+        teamInfo.put("maxMemberCount", matchTeam.getMaxMemberCount());
+        matchMessageUtils.sendTeamComplete(match.getId(), matchTeam.getId(), teamInfo);
 
         return R.ok(matchTeam.getId(), "比赛队伍创建成功");
     }
@@ -276,8 +284,15 @@ public class ApiMatchServiceImpl implements ApiMatchService {
         // 更新审核记录状态
         matchUserExamine.setStatus(matchUserExamineCmd.getStatus());
         matchUserExamine.setOpinion(matchUserExamineCmd.getOpinion());
-
         matchUserExamineMapper.updateById(matchUserExamine);
+
+        // 发送审核结果消息
+        Map<String, Object> examineInfo = new HashMap<>();
+        examineInfo.put("userId", matchUserExamine.getUserId());
+        examineInfo.put("teamId", matchUserExamine.getTeamId());
+        examineInfo.put("status", matchUserExamine.getStatus());
+        examineInfo.put("opinion", matchUserExamine.getOpinion());
+        matchMessageUtils.sendMemberExamine(matchUserExamine.getMatchId(), matchUserExamine.getTeamId(), examineInfo);
 
         return R.ok(matchUserExamine.getId(), "用户审核成功");
     }
@@ -1196,6 +1211,13 @@ public class ApiMatchServiceImpl implements ApiMatchService {
         stage.setEndTime(LocalDateTime.now());
         stage.setUpdateTime(LocalDateTime.now());
         stageMapper.updateById(stage);
+
+        // 发送阶段结束消息
+        Map<String, Object> stageResult = new HashMap<>();
+        stageResult.put("stageId", stage.getId());
+        stageResult.put("type", stage.getType());
+        stageResult.put("endTime", stage.getEndTime());
+        matchMessageUtils.sendStageEnd(stage.getMatchId(), stageResult);
 
         // 如果不是决赛，自动开始下一阶段
         if (stage.getType() != 4) {
