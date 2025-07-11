@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.ruoyi.admin.mapper.TtUserMapper;
 import com.ruoyi.admin.mapper.match.*;
 import com.ruoyi.common.core.domain.R;
+import com.ruoyi.common.utils.bean.BeanUtils;
 import com.ruoyi.domain.entity.match.*;
 import com.ruoyi.domain.entity.sys.TtUser;
 import com.ruoyi.playingmethod.model.match.*;
@@ -451,12 +452,12 @@ public class ApiMatchServiceImpl implements ApiMatchService {
         }
 
         // 按group分组
-        Map<Integer, List<StageGroup>> groupMap = stageGroups.stream().collect(Collectors.groupingBy(StageGroup::getId));
+        Map<String, List<StageGroup>> groupMap = stageGroups.stream().collect(Collectors.groupingBy(StageGroup::getGroupName));
 
         // 遍历每个组创建对战
-        for (Map.Entry<Integer, List<StageGroup>> entry : groupMap.entrySet()) {
+        for (Map.Entry<String, List<StageGroup>> entry : groupMap.entrySet()) {
 
-            Integer groupId = entry.getKey();
+           String groupName = entry.getKey();
 
             List<StageGroup> groupList = entry.getValue();
 
@@ -490,25 +491,15 @@ public class ApiMatchServiceImpl implements ApiMatchService {
                         continue;
                     }
 
-                    // 创建A→B的对战记录
-                    StageGroupFight fightAB = new StageGroupFight();
-                    fightAB.setStageId(stage.getId());
-                    fightAB.setTeamId(teamAId);
-                    fightAB.setOpponentTeamId(teamBId);
-                    fightAB.setGroupId(groupId);
-                    fightAB.setStatus(0); // 初始状态为未开始
-                    fightAB.setRound(currentRound);
-                    stageGroupFightMapper.insert(fightAB);
-
-                    // 创建B→A的对战记录
-                    StageGroupFight fightBA = new StageGroupFight();
-                    fightBA.setStageId(stage.getId());
-                    fightBA.setTeamId(teamBId);
-                    fightBA.setOpponentTeamId(teamAId);
-                    fightBA.setGroupId(groupId);
-                    fightBA.setStatus(0); // 初始状态为未开始
-                    fightBA.setRound(currentRound);
-                    stageGroupFightMapper.insert(fightBA);
+                    // 创建对战记录
+                    StageGroupFight stageGroupFight = new StageGroupFight();
+                    stageGroupFight.setStageId(stage.getId());
+                    stageGroupFight.setTeamId(teamAId);
+                    stageGroupFight.setOpponentTeamId(teamBId);
+                    stageGroupFight.setGroupName(groupName);
+                    stageGroupFight.setStatus(0); // 初始状态为未开始
+                    stageGroupFight.setRound(currentRound);
+                    stageGroupFightMapper.insert(stageGroupFight);
                 }
 
                 // 旋转队伍（固定第一个队伍，其他队伍逆时针旋转）
@@ -558,8 +549,6 @@ public class ApiMatchServiceImpl implements ApiMatchService {
         }
 
 
-        List<StageRecord> stageRecordList = new ArrayList<>();
-
         // 初始对战记录
         for (StageGroupFight fight : fights) {
             // 获取对战双方的队员信息
@@ -577,35 +566,49 @@ public class ApiMatchServiceImpl implements ApiMatchService {
 
             for (int i = 1; i <= roundNum; i++) {
 
-                StageRecord record = new StageRecord();
-                record.setGroupId(fight.getGroupId());
-                record.setGroupFightId(fight.getId());
-                record.setStageId(stage.getId());
-                record.setTeamId(fight.getTeamId());
-                record.setOpponentTeamId(fight.getOpponentTeamId());
-                record.setRound(i);
+                Integer resultData = new Random().nextInt(100) + 1;
+
+                StageRecord userStageRecord = new StageRecord();
+                userStageRecord.setGroupFightId(fight.getId());
+                userStageRecord.setGroupName(fight.getGroupName());
+                userStageRecord.setStageId(stage.getId());
+                userStageRecord.setTeamId(fight.getTeamId());
+                userStageRecord.setOpponentTeamId(fight.getOpponentTeamId());
+                userStageRecord.setRound(i);
 
                 if (i <= teamAUsers.size()) {
-                    record.setUserId(teamAUsers.get(i - 1).getUserId());
+                    userStageRecord.setUserId(teamAUsers.get(i - 1).getUserId());
                 } else {
                     // 如果队伍A的用户不足，则A的可用户重复对战
-                    record.setUserId(teamAUsers.get(i - teamAUsers.size()).getUserId());
+                    userStageRecord.setUserId(teamAUsers.get(i - teamAUsers.size()).getUserId());
                 }
 
                 if (i <= teamBUsers.size()) {
-                    record.setOpponentUserId(teamBUsers.get(i - 1).getUserId());
+                    userStageRecord.setOpponentUserId(teamBUsers.get(i - 1).getUserId());
                 } else {
                     // 如果队伍B的用户不足，则B的可用户重复对战
-                    record.setOpponentUserId(teamBUsers.get(i - teamBUsers.size()).getUserId());
+                    userStageRecord.setOpponentUserId(teamBUsers.get(i - teamBUsers.size()).getUserId());
                 }
 
+                userStageRecord.setResultData(resultData);
+                userStageRecord.setScore(BigDecimal.ZERO);
+                userStageRecord.setOpponentScore(BigDecimal.ZERO);
+                userStageRecord.setTotalScore(BigDecimal.ZERO);
+                userStageRecord.setCreateTime(LocalDateTime.now());
 
-                record.setScore(BigDecimal.ZERO);
-                record.setOpponentScore(BigDecimal.ZERO);
-                record.setTotalScore(BigDecimal.ZERO);
-                record.setCreateTime(LocalDateTime.now());
+                //创建对手的对战记录
+                StageRecord opponentStageRecord = new StageRecord();
+                BeanUtils.copyProperties(userStageRecord, opponentStageRecord);
 
-                stageRecordList.add(record);
+                opponentStageRecord.setTeamId(fight.getOpponentTeamId());
+                opponentStageRecord.setOpponentTeamId(fight.getTeamId());
+
+                opponentStageRecord.setUserId(userStageRecord.getOpponentUserId());
+                opponentStageRecord.setOpponentUserId(userStageRecord.getUserId());
+
+                stageRecordMapper.insert(userStageRecord);
+
+                stageRecordMapper.insert(opponentStageRecord);
             }
         }
 

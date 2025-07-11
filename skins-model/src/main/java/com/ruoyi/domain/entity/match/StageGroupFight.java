@@ -23,9 +23,9 @@ public class StageGroupFight {
     private Integer stageId;
 
     /**
-     * 分组ID
+     * 分组
      */
-    private Integer groupId;
+    private String groupName;
 
     /**
      * 队伍ID

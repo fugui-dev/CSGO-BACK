@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName(value = "stage_team")
+@TableName(value = "stage_record")
 public class StageRecord {
 
     @TableId(type = IdType.AUTO)
@@ -25,9 +25,9 @@ public class StageRecord {
     private Integer stageId;
 
     /**
-     * 分组ID
+     * 分组名称
      */
-    private Integer groupId;
+    private String groupName;
 
     /**
      * 分组战斗ID
