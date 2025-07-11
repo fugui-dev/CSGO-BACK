@@ -25,6 +25,16 @@ public class StageRecord {
     private Integer stageId;
 
     /**
+     * 分组ID
+     */
+    private Integer groupId;
+
+    /**
+     * 分组战斗ID
+     */
+    private Integer groupFightId;
+
+    /**
      * 队伍ID
      */
     private Integer teamId;

@@ -36,4 +36,14 @@ public class StageGroupFight {
      * 对手队伍ID
      */
     private Integer opponentTeamId;
+
+    /**
+     * 回合数
+     */
+    private Integer round;
+
+    /**
+     * 状态 (0-未开始, 1-进行中, 2-已结束)
+     */
+    private Integer status;
 }

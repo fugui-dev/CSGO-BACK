@@ -17,6 +17,7 @@ import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class ApiMatchServiceImpl implements ApiMatchService {
@@ -117,14 +118,6 @@ public class ApiMatchServiceImpl implements ApiMatchService {
 
         matchUserMapper.insert(matchUser);
 
-        // 发送队伍创建消息
-        Map<String, Object> teamInfo = new HashMap<>();
-        teamInfo.put("teamId", matchTeam.getId());
-        teamInfo.put("name", matchTeam.getName());
-        teamInfo.put("captainUserId", matchTeam.getCaptainUserId());
-        teamInfo.put("memberCount", matchTeam.getMemberCount());
-        teamInfo.put("maxMemberCount", matchTeam.getMaxMemberCount());
-        matchMessageUtils.sendTeamComplete(match.getId(), matchTeam.getId(), teamInfo);
 
         return R.ok(matchTeam.getId(), "比赛队伍创建成功");
     }
@@ -286,13 +279,6 @@ public class ApiMatchServiceImpl implements ApiMatchService {
         matchUserExamine.setOpinion(matchUserExamineCmd.getOpinion());
         matchUserExamineMapper.updateById(matchUserExamine);
 
-        // 发送审核结果消息
-        Map<String, Object> examineInfo = new HashMap<>();
-        examineInfo.put("userId", matchUserExamine.getUserId());
-        examineInfo.put("teamId", matchUserExamine.getTeamId());
-        examineInfo.put("status", matchUserExamine.getStatus());
-        examineInfo.put("opinion", matchUserExamine.getOpinion());
-        matchMessageUtils.sendMemberExamine(matchUserExamine.getMatchId(), matchUserExamine.getTeamId(), examineInfo);
 
         return R.ok(matchUserExamine.getId(), "用户审核成功");
     }
@@ -322,8 +308,8 @@ public class ApiMatchServiceImpl implements ApiMatchService {
 
         // 检查队伍是否存在
         LambdaQueryWrapper<StageTeam> stageTeamLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        stageTeamLambdaQueryWrapper.eq(StageTeam::getStageId,stageCheerCmd.getStageId());
-        stageTeamLambdaQueryWrapper.eq(StageTeam::getTeamId,stageCheerCmd.getTeamId());
+        stageTeamLambdaQueryWrapper.eq(StageTeam::getStageId, stageCheerCmd.getStageId());
+        stageTeamLambdaQueryWrapper.eq(StageTeam::getTeamId, stageCheerCmd.getTeamId());
 
         StageTeam stageTeam = stageTeamMapper.selectOne(stageTeamLambdaQueryWrapper);
         if (stageTeam == null) {
@@ -336,7 +322,7 @@ public class ApiMatchServiceImpl implements ApiMatchService {
         }
 
         LambdaQueryWrapper<StageCheerConfig> stageCheerConfigQueryWrapper = new LambdaQueryWrapper<>();
-        stageCheerConfigQueryWrapper.eq(StageCheerConfig::getType,stage.getType());
+        stageCheerConfigQueryWrapper.eq(StageCheerConfig::getType, stage.getType());
 
         StageCheerConfig stageCheerConfig = stageCheerConfigMapper.selectOne(stageCheerConfigQueryWrapper);
         if (stageCheerConfig == null) {
@@ -359,7 +345,7 @@ public class ApiMatchServiceImpl implements ApiMatchService {
         stageTeam.setCheerAmount(stageTeam.getCheerAmount().add(stageCheerCmd.getAmount()));
         stageTeamMapper.updateById(stageTeam);
 
-        return R.ok(stageCheer.getId(),"助威成功");
+        return R.ok(stageCheer.getId(), "助威成功");
     }
 
     @Override
@@ -409,7 +395,7 @@ public class ApiMatchServiceImpl implements ApiMatchService {
         int requiredTeams;
         int teamsPerGroup;
         String[] groups;
-        
+
         switch (stage.getType()) {
             case 1: // 小组赛
                 requiredTeams = 16;
@@ -443,6 +429,8 @@ public class ApiMatchServiceImpl implements ApiMatchService {
         // 随机打乱队伍顺序
         Collections.shuffle(stageTeams);
 
+        List<StageGroup> stageGroups = new ArrayList<>();
+
         // 进行分组并保存
         for (int i = 0; i < stageTeams.size(); i++) {
             StageTeam team = stageTeams.get(i);
@@ -458,20 +446,92 @@ public class ApiMatchServiceImpl implements ApiMatchService {
             stageGroup.setUpdateTime(LocalDateTime.now());
             stageGroupMapper.insert(stageGroup);
 
-            // 发送分组创建消息
-            Map<String, Object> groupInfo = new HashMap<>();
-            groupInfo.put("teamId", team.getTeamId());
-            groupInfo.put("groupName", groupName);
-            matchMessageUtils.sendGroupCreated(stage.getMatchId(), groupName, groupInfo);
+            stageGroups.add(stageGroup);
+
+        }
+
+        // 按group分组
+        Map<Integer, List<StageGroup>> groupMap = stageGroups.stream().collect(Collectors.groupingBy(StageGroup::getId));
+
+        // 遍历每个组创建对战
+        for (Map.Entry<Integer, List<StageGroup>> entry : groupMap.entrySet()) {
+
+            Integer groupId = entry.getKey();
+
+            List<StageGroup> groupList = entry.getValue();
+
+            // 提取teamId列表
+            List<Integer> teamIds = groupList.stream().map(StageGroup::getTeamId).collect(Collectors.toList());
+
+            Integer teamCount = teamIds.size();
+
+
+            int totalRounds = teamCount - 1; // 总轮数 = 队伍数 - 1
+
+            int fightNumber = teamCount / 2; // 每轮比赛数 = 队伍数 / 2
+
+            // 生成所有轮次的对战组合
+            for (int round = 0; round < totalRounds; round++) {
+
+                int currentRound = round + 1;
+
+                for (int fight = 0; fight < fightNumber; fight++) {
+
+                    int homeIndex = fight;
+
+                    int awayIndex = teamCount - 1 - fight;
+
+                    Integer teamAId = teamIds.get(homeIndex);
+
+                    Integer teamBId = teamIds.get(awayIndex);
+
+                    // 跳过轮空队伍的对战记录
+                    if (teamAId == -1 || teamBId == -1) {
+                        continue;
+                    }
+
+                    // 创建A→B的对战记录
+                    StageGroupFight fightAB = new StageGroupFight();
+                    fightAB.setStageId(stage.getId());
+                    fightAB.setTeamId(teamAId);
+                    fightAB.setOpponentTeamId(teamBId);
+                    fightAB.setGroupId(groupId);
+                    fightAB.setStatus(0); // 初始状态为未开始
+                    fightAB.setRound(currentRound);
+                    stageGroupFightMapper.insert(fightAB);
+
+                    // 创建B→A的对战记录
+                    StageGroupFight fightBA = new StageGroupFight();
+                    fightBA.setStageId(stage.getId());
+                    fightBA.setTeamId(teamBId);
+                    fightBA.setOpponentTeamId(teamAId);
+                    fightBA.setGroupId(groupId);
+                    fightBA.setStatus(0); // 初始状态为未开始
+                    fightBA.setRound(currentRound);
+                    stageGroupFightMapper.insert(fightBA);
+                }
+
+                // 旋转队伍（固定第一个队伍，其他队伍逆时针旋转）
+                if (teamCount > 2) {
+
+                    Integer temp = teamIds.get(1);
+
+                    for (int i = 1; i < teamCount - 1; i++) {
+
+                        teamIds.set(i, teamIds.get(i + 1));
+                    }
+                    teamIds.set(teamCount - 1, temp);
+                }
+            }
         }
 
         return R.ok(stage.getId(), "分组成功");
     }
 
     @Override
-    public R<Void> startStage(Integer stageId) {
+    public R<Void> startStage(StartStageCmd startStageCmd) {
         // 检查阶段是否存在
-        Stage stage = stageMapper.selectById(stageId);
+        Stage stage = stageMapper.selectById(startStageCmd.getStageId());
         if (stage == null) {
             return R.fail("阶段不存在");
         }
@@ -481,18 +541,9 @@ public class ApiMatchServiceImpl implements ApiMatchService {
             return R.fail("阶段已开始或已结束");
         }
 
-        // 检查比赛状态
-        Match match = matchMapper.selectById(stage.getMatchId());
-        if (match == null) {
-            return R.fail("比赛不存在");
-        }
-        if (match.getStatus() != 1) {
-            return R.fail("比赛未开始或已结束");
-        }
-
         // 检查是否已分组
         LambdaQueryWrapper<StageGroup> groupQuery = new LambdaQueryWrapper<>();
-        groupQuery.eq(StageGroup::getStageId, stageId);
+        groupQuery.eq(StageGroup::getStageId, startStageCmd.getStageId());
         Integer groupCount = stageGroupMapper.selectCount(groupQuery);
         if (groupCount == 0) {
             return R.fail("阶段未完成分组");
@@ -500,13 +551,16 @@ public class ApiMatchServiceImpl implements ApiMatchService {
 
         // 获取所有对战记录
         LambdaQueryWrapper<StageGroupFight> fightQuery = new LambdaQueryWrapper<>();
-        fightQuery.eq(StageGroupFight::getStageId, stageId);
+        fightQuery.eq(StageGroupFight::getStageId, startStageCmd.getStageId());
         List<StageGroupFight> fights = stageGroupFightMapper.selectList(fightQuery);
         if (fights.isEmpty()) {
             return R.fail("未找到对战记录");
         }
 
-        // 初始化第一轮对战记录
+
+        List<StageRecord> stageRecordList = new ArrayList<>();
+
+        // 初始对战记录
         for (StageGroupFight fight : fights) {
             // 获取对战双方的队员信息
             LambdaQueryWrapper<MatchUser> teamAQuery = new LambdaQueryWrapper<>();
@@ -517,31 +571,44 @@ public class ApiMatchServiceImpl implements ApiMatchService {
             teamBQuery.eq(MatchUser::getTeamId, fight.getOpponentTeamId());
             List<MatchUser> teamBUsers = matchUserMapper.selectList(teamBQuery);
 
-            // 创建第一轮对战记录
-            for (MatchUser userA : teamAUsers) {
+
+            //创建队员对战的初始记录
+            Integer roundNum = Math.max(teamAUsers.size(), teamBUsers.size());
+
+            for (int i = 1; i <= roundNum; i++) {
+
                 StageRecord record = new StageRecord();
-                record.setStageId(stageId);
+                record.setGroupId(fight.getGroupId());
+                record.setGroupFightId(fight.getId());
+                record.setStageId(stage.getId());
                 record.setTeamId(fight.getTeamId());
                 record.setOpponentTeamId(fight.getOpponentTeamId());
-                record.setUserId(userA.getUserId());
-                record.setRound(1); // 第一轮
-                record.setCreateTime(LocalDateTime.now());
-                record.setUpdateTime(LocalDateTime.now());
-                stageRecordMapper.insert(record);
-            }
+                record.setRound(i);
 
-            for (MatchUser userB : teamBUsers) {
-                StageRecord record = new StageRecord();
-                record.setStageId(stageId);
-                record.setTeamId(fight.getOpponentTeamId());
-                record.setOpponentTeamId(fight.getTeamId());
-                record.setUserId(userB.getUserId());
-                record.setRound(1); // 第一轮
+                if (i <= teamAUsers.size()) {
+                    record.setUserId(teamAUsers.get(i - 1).getUserId());
+                } else {
+                    // 如果队伍A的用户不足，则A的可用户重复对战
+                    record.setUserId(teamAUsers.get(i - teamAUsers.size()).getUserId());
+                }
+
+                if (i <= teamBUsers.size()) {
+                    record.setOpponentUserId(teamBUsers.get(i - 1).getUserId());
+                } else {
+                    // 如果队伍B的用户不足，则B的可用户重复对战
+                    record.setOpponentUserId(teamBUsers.get(i - teamBUsers.size()).getUserId());
+                }
+
+
+                record.setScore(BigDecimal.ZERO);
+                record.setOpponentScore(BigDecimal.ZERO);
+                record.setTotalScore(BigDecimal.ZERO);
                 record.setCreateTime(LocalDateTime.now());
-                record.setUpdateTime(LocalDateTime.now());
-                stageRecordMapper.insert(record);
+
+                stageRecordList.add(record);
             }
         }
+
 
         // 更新阶段状态为进行中
         stage.setStatus(1);
@@ -549,15 +616,8 @@ public class ApiMatchServiceImpl implements ApiMatchService {
         stage.setUpdateTime(LocalDateTime.now());
         stageMapper.updateById(stage);
 
-        // 发送阶段开始消息
-        Map<String, Object> stageInfo = new HashMap<>();
-        stageInfo.put("stageId", stage.getId());
-        stageInfo.put("type", stage.getType());
-        stageInfo.put("startTime", stage.getStartTime());
-        matchMessageUtils.sendStageStart(stage.getMatchId(), stageInfo);
 
-        // 开始第一轮
-        return startRound(stageId, 1);
+        return R.ok();
     }
 
     @Override
@@ -613,11 +673,6 @@ public class ApiMatchServiceImpl implements ApiMatchService {
                 stageRecordMapper.updateById(record);
             }
 
-            // 发送回合开始消息
-            Map<String, Object> roundInfo = new HashMap<>();
-            roundInfo.put("roundNum", roundNum);
-            roundInfo.put("systemNumber", systemNumber);
-            matchMessageUtils.sendRoundStart(stage.getMatchId(), group.getGroupName(), roundInfo);
         }
 
         return R.ok();
@@ -660,17 +715,11 @@ public class ApiMatchServiceImpl implements ApiMatchService {
 
         // 获取玩家所在分组
         StageGroup group = stageGroupMapper.selectOne(
-            new LambdaQueryWrapper<StageGroup>()
-                .eq(StageGroup::getStageId, stageId)
-                .eq(StageGroup::getTeamId, record.getTeamId())
+                new LambdaQueryWrapper<StageGroup>()
+                        .eq(StageGroup::getStageId, stageId)
+                        .eq(StageGroup::getTeamId, record.getTeamId())
         );
 
-        // 发送玩家选择消息
-        Map<String, Object> selectInfo = new HashMap<>();
-        selectInfo.put("userId", userId);
-        selectInfo.put("probability", probability);
-        selectInfo.put("roundNum", record.getRound());
-        matchMessageUtils.sendPlayerSelect(stage.getMatchId(), group.getGroupName(), selectInfo);
 
         // 检查是否所有玩家都已选择概率
         LambdaQueryWrapper<StageRecord> unselectedQuery = new LambdaQueryWrapper<>();
@@ -727,13 +776,13 @@ public class ApiMatchServiceImpl implements ApiMatchService {
             // 检查是否为队长
             MatchTeam team = matchTeamMapper.selectById(record.getTeamId());
             boolean isCaptain = team != null && team.getCaptainUserId().equals(record.getUserId());
-            
+
             // 计算得分
             R<Integer> scoreResult = calculateScore(record.getData(), record.getResultData(), isCaptain);
             if (!scoreResult.getCode().equals(200)) {
                 return R.fail(scoreResult.getMsg());
             }
-            
+
             record.setScore(BigDecimal.valueOf(scoreResult.getData()));
             record.setUpdateTime(LocalDateTime.now());
             stageRecordMapper.updateById(record);
@@ -780,7 +829,7 @@ public class ApiMatchServiceImpl implements ApiMatchService {
         } else if (stage.getType() == 2 || stage.getType() == 3) { // 8强或4强
             // 确定获胜队伍并创建下一阶段
             R<List<Integer>> promotionResult = determinePromotedTeams(stageId);
-            if (!promotionResult.getCode().equals(200) ) {
+            if (!promotionResult.getCode().equals(200)) {
                 return R.fail(promotionResult.getMsg());
             }
 
@@ -877,9 +926,9 @@ public class ApiMatchServiceImpl implements ApiMatchService {
 
         // 检查队伍是否存在
         StageTeam stageTeam = stageTeamMapper.selectOne(
-            new LambdaQueryWrapper<StageTeam>()
-                .eq(StageTeam::getTeamId, teamId)
-                .eq(StageTeam::getStageId, stageId)
+                new LambdaQueryWrapper<StageTeam>()
+                        .eq(StageTeam::getTeamId, teamId)
+                        .eq(StageTeam::getStageId, stageId)
         );
         if (stageTeam == null) {
             return R.fail("队伍不存在或不在该阶段");
@@ -1056,14 +1105,6 @@ public class ApiMatchServiceImpl implements ApiMatchService {
             return R.fail("未找到晋级队伍");
         }
 
-        // 发送晋级结果
-        for (Map.Entry<String, List<StageTeam>> entry : groupTeams.entrySet()) {
-            Map<String, Object> promotionInfo = new HashMap<>();
-            promotionInfo.put("promotedTeams", promotedTeams);
-            promotionInfo.put("standings", entry.getValue());
-            matchMessageUtils.sendPromotionResult(stage.getMatchId(), entry.getKey(), promotionInfo);
-        }
-
         return R.ok(promotedTeams);
     }
 
@@ -1159,13 +1200,13 @@ public class ApiMatchServiceImpl implements ApiMatchService {
             StageTeam nextTeam = new StageTeam();
             nextTeam.setStageId(nextStageId);
             nextTeam.setTeamId(teamId);
-            
+
             // 复制当前阶段的初始分数和助威金额
             StageTeam currentTeam = currentTeams.stream()
                     .filter(t -> t.getTeamId().equals(teamId))
                     .findFirst()
                     .orElse(null);
-            
+
             if (currentTeam != null) {
                 nextTeam.setInitialScore(currentTeam.getTotalScore()); // 使用当前阶段的总分作为下一阶段的初始分
                 nextTeam.setCheerAmount(currentTeam.getCheerAmount());
@@ -1173,11 +1214,11 @@ public class ApiMatchServiceImpl implements ApiMatchService {
                 nextTeam.setInitialScore(BigDecimal.ZERO);
                 nextTeam.setCheerAmount(BigDecimal.ZERO);
             }
-            
+
             nextTeam.setTotalScore(nextTeam.getInitialScore()); // 初始总分等于初始分
             nextTeam.setCreateTime(LocalDateTime.now());
             nextTeam.setUpdateTime(LocalDateTime.now());
-            
+
             stageTeamMapper.insert(nextTeam);
         }
 
@@ -1212,12 +1253,6 @@ public class ApiMatchServiceImpl implements ApiMatchService {
         stage.setUpdateTime(LocalDateTime.now());
         stageMapper.updateById(stage);
 
-        // 发送阶段结束消息
-        Map<String, Object> stageResult = new HashMap<>();
-        stageResult.put("stageId", stage.getId());
-        stageResult.put("type", stage.getType());
-        stageResult.put("endTime", stage.getEndTime());
-        matchMessageUtils.sendStageEnd(stage.getMatchId(), stageResult);
 
         // 如果不是决赛，自动开始下一阶段
         if (stage.getType() != 4) {
@@ -1330,14 +1365,6 @@ public class ApiMatchServiceImpl implements ApiMatchService {
                 ttUserMapper.updateById(user);
             }
         }
-
-        // 发送比赛结束消息
-        Map<String, Object> matchResult = new HashMap<>();
-        matchResult.put("championTeam", teams.get(0));
-        matchResult.put("runnerUpTeam", teams.get(1));
-        matchResult.put("championPrize", championPrize);
-        matchResult.put("runnerUpPrize", runnerUpPrize);
-        matchMessageUtils.sendMatchEnd(matchId, matchResult);
 
         return R.ok();
     }

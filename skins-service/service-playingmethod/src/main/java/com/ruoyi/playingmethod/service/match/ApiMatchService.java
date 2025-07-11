@@ -36,7 +36,7 @@ public interface ApiMatchService {
      * 开始比赛阶段
      * @param stageId 阶段ID
      */
-    R<Void> startStage(Integer stageId);
+    R<Void> startStage(StartStageCmd startStageCmd);
 
     /**
      * 结束比赛阶段
